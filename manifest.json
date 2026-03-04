@@ -1,0 +1,51 @@
+{
+  "name": "OSINT Web MCP",
+  "version": "1.0.0",
+  "description": "An open-source, local-first OSINT and Web Scraping MCP server.",
+  "author": "Open Source Community",
+  "license": "MIT",
+  "platforms": ["linux", "macos", "windows"],
+  "main": "src/server.js",
+  "tools": [
+    {"name": "osint_search_google", "description": "Search Google and return structured results (title, link, snippet)."},
+    {"name": "osint_search_duckduckgo", "description": "Search DuckDuckGo for private results."},
+    {"name": "osint_scrape", "description": "Deep-scrape a single URL into AI-optimized Markdown content."},
+    {"name": "osint_whois", "description": "Perform WHOIS domain registration lookup."},
+    {"name": "osint_dns", "description": "Perform DNS record lookups (A, MX, TXT, etc.)."},
+    {"name": "osint_ip_info", "description": "Retrieve IP geolocation and network info using free API."},
+    {"name": "osint_user_lookup", "description": "Locate a username across GitHub, Twitter, Instagram, Reddit, and YouTube."},
+    {"name": "osint_amazon_search", "description": "Search for products on Amazon locally."},
+    {"name": "osint_ebay_search", "description": "Search for products on eBay locally."},
+    {"name": "osint_github_search", "description": "Search for repositories on GitHub locally."},
+    {"name": "osint_reddit_search", "description": "Search for public posts on Reddit locally."},
+    {"name": "osint_linkedin_jobs_search", "description": "Search for public job listings on LinkedIn locally."},
+    {"name": "osint_twitter_search", "description": "Search for public tweets on Twitter (X) locally."},
+    {"name": "osint_google_news_search", "description": "Search for news articles on Google News locally."},
+    {"name": "osint_youtube_search", "description": "Search for videos on YouTube locally."},
+    {"name": "osint_hacker_news_search", "description": "Search for stories on Hacker News locally."},
+    {"name": "osint_search_wikipedia", "description": "Search Wikipedia articles locally."},
+    {"name": "osint_search_craigslist", "description": "Search Craigslist locally."},
+    {"name": "osint_search_stackoverflow", "description": "Search StackOverflow questions locally."},
+    {"name": "osint_search_booking", "description": "Search Booking.com for hotels locally."},
+    {"name": "osint_search_indeed", "description": "Search Indeed for jobs locally."},
+    {"name": "osint_yahoo_finance_quote", "description": "Get current stock quote and company info from Yahoo Finance locally."},
+    {"name": "browser_navigate", "description": "Navigate to a URL using the local stealth browser."},
+    {"name": "browser_snapshot", "description": "Capture an ARIA accessibility snapshot of the current page."},
+    {"name": "browser_click", "description": "Click an element using its ARIA ref or semantic name."},
+    {"name": "browser_type", "description": "Type text into an element via ref or name."},
+    {"name": "browser_screenshot", "description": "Capture a screenshot of the current page."},
+    {"name": "browser_get_text", "description": "Retrieve the visible text content of the page."},
+    {"name": "browser_scroll", "description": "Scroll the current page (top or bottom)."}
+  ],
+  "config": {
+    "headless": {
+      "type": "boolean",
+      "default": true,
+      "description": "Run the browser in headless mode."
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "Custom User-Agent string for the stealth browser."
+    }
+  }
+}

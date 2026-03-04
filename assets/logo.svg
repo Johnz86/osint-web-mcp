@@ -1,0 +1,17 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Circular Background -->
+  <circle cx="128" cy="128" r="120" fill="#1A1B1E"/>
+  
+  <!-- Stylized Globe / Network Lines -->
+  <circle cx="128" cy="128" r="80" stroke="#4FD1C5" stroke-width="4" opacity="0.3"/>
+  <path d="M128 48V208" stroke="#4FD1C5" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+  <path d="M48 128H208" stroke="#4FD1C5" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+  <ellipse cx="128" cy="128" rx="40" ry="80" stroke="#4FD1C5" stroke-width="2" opacity="0.3"/>
+  
+  <!-- Magnifying Glass (OSINT/Research Icon) -->
+  <circle cx="110" cy="110" r="45" stroke="#63B3ED" stroke-width="12"/>
+  <line x1="145" y1="145" x2="190" y2="190" stroke="#63B3ED" stroke-width="16" stroke-linecap="round"/>
+  
+  <!-- Subtle Internal Highlight on Lens -->
+  <path d="M85 95C85 80 95 70 110 70" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+</svg>

@@ -1,0 +1,56 @@
+[
+  {
+    "title": "Search - Google Research",
+    "query": "Search Google for the latest news on SpaceX Starship and return top links",
+    "runs": 1,
+    "model": "llama3",
+    "provider": "ollama",
+    "expectedToolCalls": ["osint_search_google"],
+    "selectedServers": ["osint-web-mcp"]
+  },
+  {
+    "title": "OSINT - Domain WHOIS",
+    "query": "Get the WHOIS registration information for google.com",
+    "runs": 1,
+    "model": "llama3",
+    "provider": "ollama",
+    "expectedToolCalls": ["osint_whois"],
+    "selectedServers": ["osint-web-mcp"]
+  },
+  {
+    "title": "OSINT - Identity Tracking",
+    "query": "Search for the username 'Johnz86' across social platforms",
+    "runs": 1,
+    "model": "llama3",
+    "provider": "ollama",
+    "expectedToolCalls": ["osint_user_lookup"],
+    "selectedServers": ["osint-web-mcp"]
+  },
+  {
+    "title": "Scraping - Readability & Markdown",
+    "query": "Scrape the content of https://en.wikipedia.org/wiki/OSINT and summarize it",
+    "runs": 1,
+    "model": "llama3",
+    "provider": "ollama",
+    "expectedToolCalls": ["osint_scrape"],
+    "selectedServers": ["osint-web-mcp"]
+  },
+  {
+    "title": "Commerce - Amazon Product Intel",
+    "query": "Search for 'Mechanical Keyboards' on Amazon and list prices",
+    "runs": 1,
+    "model": "llama3",
+    "provider": "ollama",
+    "expectedToolCalls": ["osint_amazon_search"],
+    "selectedServers": ["osint-web-mcp"]
+  },
+  {
+    "title": "Browser - Interactive Session",
+    "query": "Navigate to https://example.com, take a screenshot, and get the page text",
+    "runs": 1,
+    "model": "llama3",
+    "provider": "ollama",
+    "expectedToolCalls": ["browser_navigate", "browser_screenshot", "browser_get_text"],
+    "selectedServers": ["osint-web-mcp"]
+  }
+]

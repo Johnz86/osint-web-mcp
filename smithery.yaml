@@ -1,0 +1,21 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      headless:
+        type: boolean
+        default: true
+        description: "Run the browser in headless mode (default: true)."
+      userAgent:
+        type: string
+        description: "Optional: Custom User-Agent string for the stealth browser."
+  commandFunction: |-
+    config => ({ 
+      command: 'node', 
+      args: ['src/server.js'], 
+      env: { 
+        HEADLESS: config.headless !== undefined ? config.headless.toString() : 'true',
+        USER_AGENT: config.userAgent || ''
+      } 
+    })

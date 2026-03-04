@@ -1,0 +1,52 @@
+{
+    "name": "@osint/web-mcp",
+    "version": "1.0.0",
+    "description": "An open-source, local-first OSINT and Web Scraping MCP server.",
+    "type": "module",
+    "main": "./src/server.js",
+    "bin": {
+        "@osint/web-mcp": "./src/server.js"
+    },
+    "scripts": {
+        "start": "node src/server.js",
+        "test": "node --test"
+    },
+    "keywords": [
+        "mcp",
+        "osint",
+        "web-scraping"
+    ],
+    "author": "OSINT Community",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Johnz86/osint-web-mcp.git"
+    },
+    "bugs": {
+        "url": "https://github.com/Johnz86/osint-web-mcp/issues"
+    },
+    "license": "MIT",
+    "dependencies": {
+       "@modelcontextprotocol/sdk": "1.21.2",
+        "@mozilla/readability": "^0.5.0",
+        "axios": "^1.11.0",
+        "fastmcp": "^3.33.0",
+        "jsdom": "^26.0.0",
+        "playwright": "^1.51.1",
+        "playwright-extra": "^4.3.6",
+        "puppeteer-extra-plugin-stealth": "^2.11.2",
+        "remark": "^15.0.1",
+        "strip-markdown": "^6.0.0",
+        "turndown": "^7.2.0",
+        "whois-json": "^2.0.4",
+        "zod": "^3.24.2"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "files": [
+        "src/**/*.js",
+        "constants.js",
+        "scraper_engine.js"
+    ],
+    "mcpName": "io.github.Johnz86/osint-web-mcp"
+}

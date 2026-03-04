@@ -1,0 +1,12 @@
+{
+  "timeout": 600000,
+  "servers": {
+    "osint-web-mcp": {
+      "command": "node",
+      "args": ["src/server.js"],
+      "env": {
+        "HEADLESS": "true"
+      }
+    }
+  }
+}

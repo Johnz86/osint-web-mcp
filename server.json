@@ -1,0 +1,14 @@
+{
+  "mcpName": "io.github.Johnz86/osint-web-mcp",
+  "name": "Johnz86/osint-web-mcp",
+  "description": "An open-source, local-first OSINT and Web Scraping MCP server.",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Johnz86/osint-web-mcp"
+  },
+  "license": "MIT",
+  "npmPackage": {
+    "identifier": "@osint/web-mcp"
+  }
+}
