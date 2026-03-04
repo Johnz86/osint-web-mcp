@@ -26,7 +26,14 @@ export const local_scrape = async (url, extractor = null, arg = null) => {
     }
 
     try {
+        // Wait for dynamic content and mimic human presence
         await page.waitForTimeout(2000);
+        
+        // Scroll a bit to trigger lazy loading and look more human
+        await page.evaluate(() => {
+            window.scrollBy(0, 500);
+        });
+        await page.waitForTimeout(1000);
 
         if (extractor) {
             return await page.evaluate(extractor, arg);

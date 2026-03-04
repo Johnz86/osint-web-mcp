@@ -231,10 +231,10 @@ export const SELECTORS = {
         SNIPPET: 'div[data-testid="result-snippet"]'
     },
     AMAZON: {
-        CONTAINER: 'div[data-component-type="s-search-result"]',
-        TITLE: 'h2',
+        CONTAINER: 'div[data-component-type="s-search-result"], .s-result-item[data-asin]:not(.ad-placeholder)',
+        TITLE: 'h2, .a-size-medium.a-text-normal, .a-size-base-plus.a-text-normal',
         LINK: 'a.a-link-normal',
-        PRICE: '.a-price-whole',
+        PRICE: '.a-price-whole, .a-price .a-offscreen',
         RATING: '.a-icon-alt'
     },
     EBAY: {

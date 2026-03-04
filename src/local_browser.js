@@ -118,6 +118,9 @@ export class LocalBrowser {
                 waitUntil: 'domcontentloaded', 
                 timeout: BROWSER_CONFIG.NAV_TIMEOUT 
             });
+            // Add a small random jitter after navigation
+            const jitter = Math.floor(Math.random() * 1500) + 500;
+            await this.page.waitForTimeout(jitter);
         }
 
         return this.page;
