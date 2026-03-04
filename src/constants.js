@@ -4,8 +4,8 @@
 
 export const BROWSER_CONFIG = {
     DEFAULT_HEADLESS: true,
-    DEFAULT_TIMEOUT: 30000,
-    NAV_TIMEOUT: 120000,
+    DEFAULT_TIMEOUT: 15000,
+    NAV_TIMEOUT: 30000,
     DEFAULT_VIEWPORT: { width: 1280, height: 800 },
     DEFAULT_USER_AGENT: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 };
@@ -117,6 +117,108 @@ export const SELECTORS = {
         PRICE: '.a-price .a-offscreen',
         FEATURES: '#feature-bullets ul li',
         DESCRIPTION: '#productDescription'
+    },
+    AMAZON_REVIEWS: {
+        CONTAINER: 'div[data-hook="review"]',
+        TITLE: 'a[data-hook="review-title"]',
+        RATING: 'i[data-hook="review-star-rating"] span',
+        BODY: 'span[data-hook="review-body"]'
+    },
+    WALMART_PRODUCT: {
+        TITLE: 'h1[data-automation-id="product-title"]',
+        PRICE: 'span[itemprop="price"]',
+        SPECIFICATIONS: 'div.mb3 div.flex'
+    },
+    EBAY_PRODUCT: {
+        TITLE: 'h1.x-item-title__mainTitle',
+        PRICE: 'div.x-price-primary span',
+        CONDITION: 'div.x-item-condition-value'
+    },
+    HOMEDEPOT_PRODUCT: {
+        TITLE: 'h1.product-details__title',
+        PRICE: 'div.price-format__main-price',
+        SPECIFICATIONS: 'div.specifications__table'
+    },
+    BESTBUY_PRODUCT: {
+        TITLE: 'h1.heading-5',
+        PRICE: 'div.priceView-hero-price span',
+        SPECIFICATIONS: 'div.spec-table'
+    },
+    ETSY_PRODUCT: {
+        TITLE: 'h1[data-buy-box-listing-title]',
+        PRICE: 'div[data-buy-box-region="price"] p.wt-text-title-03',
+        DESCRIPTION: 'p[data-product-details-description-text-content]'
+    },
+    ZARA_PRODUCT: {
+        TITLE: 'h1.product-detail-info__name',
+        PRICE: 'span.price-current__amount',
+        COMPOSITION: 'div.product-detail-extra-detail'
+    },
+    YOUTUBE_VIDEO: {
+        TITLE: 'h1.ytd-watch-metadata yt-formatted-string',
+        DESCRIPTION: '#description-inline-expander',
+        CHANNEL: '#owner-sub-count'
+    },
+    YOUTUBE_COMMENTS: {
+        CONTAINER: 'ytd-comment-thread-renderer',
+        AUTHOR: '#author-text',
+        BODY: '#content-text'
+    },
+    TIKTOK_VIDEO: {
+        TITLE: 'div[data-e2e="browse-video-desc"]',
+        STATS: 'div[data-e2e="browse-video-stats"]',
+        AUTHOR: 'span[data-e2e="browse-username"]'
+    },
+    REDDIT_THREAD: {
+        TITLE: 'shreddit-title',
+        BODY: 'div[slot="text-body"]',
+        COMMENT: 'shreddit-comment'
+    },
+    X_POST: {
+        CONTAINER: 'article[data-testid="tweet"]',
+        BODY: 'div[data-testid="tweetText"]',
+        STATS: 'div[data-testid="app-bar"]'
+    },
+    GOOGLE_PLAY_APP: {
+        TITLE: 'h1[itemprop="name"]',
+        DESCRIPTION: 'div[data-g-id="description"]',
+        DEVELOPER: 'div.VfPpkd-ES9v6b-OWXpue-TV698c a'
+    },
+    APPLE_APP_STORE_APP: {
+        TITLE: 'h1.product-header__title',
+        DESCRIPTION: 'div.section__description',
+        DEVELOPER: 'h2.product-header__identity'
+    },
+    YAHOO_FINANCE_PROFILE: {
+        TITLE: 'h1',
+        SUMMARY: 'section[data-test="qsp-profile"] p',
+        SECTOR: 'span[data-test="qsp-profile"] span:nth-child(2)'
+    },
+    GOOGLE_MAPS_REVIEWS: {
+        CONTAINER: 'div.jftiEf',
+        AUTHOR: 'div.d4r55',
+        BODY: 'span.wiI7ic',
+        RATING: 'span.kvv7Id'
+    },
+    BOOKING_HOTEL: {
+        TITLE: 'h2.pp-header__title',
+        AMENITIES: 'div.hotel_facilities_block',
+        ROOMS: 'table.hprt-table'
+    },
+    ZILLOW_PROPERTY: {
+        TITLE: 'h1',
+        PRICE: 'span[data-testid="price"]',
+        FACTS: 'div.hdp-facts-container'
+    },
+    LINKEDIN_POST: {
+        CONTAINER: 'article, .main-feed-card',
+        BODY: '.feed-shared-update-v2__description, .comment-body',
+        AUTHOR: '.feed-shared-actor__name'
+    },
+    INSTAGRAM_PROFILE: {
+        TITLE: 'header h2',
+        BIO: 'header span',
+        STATS: 'header ul li'
     },
     GITHUB_FILE: {
         CONTENT: 'div.blob-wrapper table',

@@ -51,7 +51,25 @@ export class LocalBrowser {
      * Subscribe to network events to track session activity.
      */
     setup_network_tracking() {
-        this.context.on('request', request => this.network_requests.add(request));
+        this.context.on('request', request => {
+            this.network_requests.add({
+                url: request.url(),
+                method: request.method(),
+                resourceType: request.resourceType(),
+                status: null // Will be updated on response
+            });
+        });
+        this.context.on('response', response => {
+            const url = response.url();
+            const status = response.status();
+            // Find and update the request in the set
+            for (const req of this.network_requests) {
+                if (req.url === url && req.status === null) {
+                    req.status = status;
+                    break;
+                }
+            }
+        });
     }
 
     /**
@@ -77,6 +95,30 @@ export class LocalBrowser {
     }
 
     /**
+     * Navigate back in history.
+     */
+    async go_back() {
+        const page = await this.get_active_page();
+        return await page.goBack({ waitUntil: 'domcontentloaded' });
+    }
+
+    /**
+     * Navigate forward in history.
+     */
+    async go_forward() {
+        const page = await this.get_active_page();
+        return await page.goForward({ waitUntil: 'domcontentloaded' });
+    }
+
+    /**
+     * Get the full HTML content of the current page.
+     */
+    async get_html() {
+        const page = await this.get_active_page();
+        return await page.content();
+    }
+
+    /**
      * Gracefully close all browser resources.
      */
     async shutdown() {
@@ -97,10 +139,10 @@ export class LocalBrowser {
 
     /**
      * Retrieve the current network request log.
-     * @returns {Set}
+     * @returns {Array}
      */
     async get_network_log() {
-        return this.network_requests;
+        return Array.from(this.network_requests);
     }
 
     /**

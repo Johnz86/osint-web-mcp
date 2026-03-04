@@ -13,16 +13,17 @@ import strip from 'strip-markdown';
  * Execute a local browser-based scrape with optional extraction.
  * @param {string} url - The URL to navigate to.
  * @param {Function} extractor - A Playwright page.evaluate function for custom extraction.
+ * @param {any} arg - Argument to pass to the extractor function.
  * @returns {Promise<any>} The extracted data or full page content.
  */
-export const local_scrape = async(url, extractor = null)=>{
+export const local_scrape = async(url, extractor = null, arg = null)=>{
     const browser = await get_browser_instance();
-    const page = await browser.get_page();
+    const page = await browser.get_active_page();
     
     try {
-        await page.goto(url, {waitUntil: 'networkidle', timeout: 60000});
+        await page.goto(url, {waitUntil: 'domcontentloaded', timeout: 30000});
         if (extractor)
-            return await page.evaluate(extractor);
+            return await page.evaluate(extractor, arg);
         return await page.content();
     } catch(e){
         throw new Error(`Scrape failed for ${url}: ${e.message}`);
