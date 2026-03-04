@@ -78,9 +78,9 @@ export const SELECTORS = {
         PRICE: 'div.priceView-hero-price span'
     },
     ETSY: {
-        CONTAINER: '.wt-grid__item-section, .listing-link',
+        CONTAINER: '.v2-listing-card, .wt-grid__item-section',
         TITLE: '.v2-listing-card__title, h3',
-        LINK: 'a.listing-link, a.v2-listing-card__link',
+        LINK: 'a.listing-link, a.v2-listing-card__img, a.v2-listing-card__link',
         PRICE: '.currency-value'
     },
     HOMEDEPOT: {
@@ -145,9 +145,9 @@ export const SELECTORS = {
         SPECIFICATIONS: 'div.spec-table'
     },
     ETSY_PRODUCT: {
-        TITLE: 'h1[data-buy-box-listing-title]',
-        PRICE: 'div[data-buy-box-region="price"] p.wt-text-title-03',
-        DESCRIPTION: 'p[data-product-details-description-text-content]'
+        TITLE: 'h1[data-buy-box-listing-title], h1.wt-text-body-01, h1',
+        PRICE: 'div[data-buy-box-region="price"] p.wt-text-title-03, .wt-text-title-03, .currency-value',
+        DESCRIPTION: 'p[data-product-details-description-text-content], #listing-right-column'
     },
     ZARA_PRODUCT: {
         TITLE: 'h1.product-detail-info__name',
@@ -334,5 +334,7 @@ export const BOT_INDICATORS = [
     'captcha',
     'bot detection',
     'verify you are human',
-    'access denied'
+    'access denied',
+    'datadome',
+    'captcha-delivery'
 ];

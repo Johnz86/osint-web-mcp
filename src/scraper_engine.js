@@ -87,9 +87,16 @@ export const perform_search_scrape = async (search_url, selector_map) => {
 const check_bot_detection = (doc, url) => {
     const title = doc.title?.toLowerCase() || '';
     const h1 = doc.querySelector('h1')?.innerText?.toLowerCase() || '';
+    const body = doc.body?.innerText?.toLowerCase() || '';
     
-    if (BOT_INDICATORS.some(ind => title.includes(ind) || h1.includes(ind))) {
-        throw new Error(`Scraper blocked by bot detection on ${new URL(url).hostname}.`);
+    const is_blocked = BOT_INDICATORS.some(ind => 
+        title.includes(ind) || 
+        h1.includes(ind) || 
+        body.includes(ind)
+    );
+
+    if (is_blocked) {
+        throw new Error(`Scraper blocked by bot detection on ${new URL(url).hostname}. Try setting HEADLESS=false.`);
     }
 };
 

@@ -50,7 +50,10 @@ export class LocalBrowser {
         this.context = await chromium_stealth.launchPersistentContext(USER_DATA_DIR, {
             executablePath: executablePath || undefined,
             headless: this.is_headless,
-            viewport: BROWSER_CONFIG.DEFAULT_VIEWPORT,
+            viewport: {
+                width: 1280 + Math.floor(Math.random() * 100),
+                height: 800 + Math.floor(Math.random() * 100)
+            },
             userAgent: process.env.USER_AGENT || BROWSER_CONFIG.DEFAULT_USER_AGENT,
             args: [
                 '--no-sandbox',
@@ -119,7 +122,7 @@ export class LocalBrowser {
                 timeout: BROWSER_CONFIG.NAV_TIMEOUT 
             });
             // Add a small random jitter after navigation
-            const jitter = Math.floor(Math.random() * 1500) + 500;
+            const jitter = Math.floor(Math.random() * 2000) + 1000;
             await this.page.waitForTimeout(jitter);
         }
 
