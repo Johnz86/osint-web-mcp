@@ -262,7 +262,7 @@ export const SELECTORS = {
         TITLE: '.base-search-card__title',
         LINK: '.base-card__full-link',
         SNIPPET: '.job-search-card__location',
-        PRICE: '.base-search-card__subtitle' // Using price for company name
+        PRICE: '.base-search-card__subtitle'
     },
     TWITTER: {
         CONTAINER: 'article[data-testid="tweet"]',
@@ -275,21 +275,21 @@ export const SELECTORS = {
         TITLE: 'div[role="heading"], h3',
         LINK: 'a',
         SNIPPET: '.OSrXXb',
-        PRICE: '.Mg7P1b, .XTXvN' // Using price for source
+        PRICE: '.Mg7P1b, .XTXvN'
     },
     YOUTUBE: {
         CONTAINER: 'ytd-video-renderer',
         TITLE: '#video-title',
         LINK: '#video-title',
         SNIPPET: '#metadata-line',
-        PRICE: '#channel-info' // Using price for channel
+        PRICE: '#channel-info'
     },
     HACKER_NEWS: {
         CONTAINER: '.Story',
         TITLE: '.Story_title a span',
         LINK: '.Story_title a',
-        SNIPPET: '.Story_meta span:nth-child(2) a', // Author
-        PRICE: '.Story_meta span:first-child' // Points
+        SNIPPET: '.Story_meta span:nth-child(2) a',
+        PRICE: '.Story_meta span:first-child'
     },
     WIKIPEDIA: {
         CONTAINER: 'li.mw-search-result',
@@ -320,7 +320,7 @@ export const SELECTORS = {
         CONTAINER: 'td.resultContent',
         TITLE: 'h2.jobTitle span',
         LINK: 'h2.jobTitle a',
-        PRICE: 'span.companyName', // Using price for company
+        PRICE: 'span.companyName',
         SNIPPET: 'div.companyLocation'
     }
 };
@@ -328,3 +328,11 @@ export const SELECTORS = {
 export const API_ENDPOINTS = {
     IP_API: 'http://ip-api.com/json/'
 };
+
+export const BOT_INDICATORS = [
+    'unusual traffic',
+    'captcha',
+    'bot detection',
+    'verify you are human',
+    'access denied'
+];
