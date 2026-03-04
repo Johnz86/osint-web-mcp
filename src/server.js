@@ -52,9 +52,25 @@ const register_search_tool = (name, description, engine_url, selectors)=>{
             query: z.string().describe(`Search query for ${name}`)
         }),
         execute: async({query})=>{
-            const url = `${engine_url}${encodeURIComponent(query)}`;
-            const results = await perform_search_scrape(url, selectors);
-            return JSON.stringify(results, null, 2);
+            try {
+                const url = `${engine_url}${encodeURIComponent(query)}`;
+                const results = await perform_search_scrape(url, selectors);
+                
+                if (!results || results.length === 0) {
+                    return JSON.stringify({
+                        error: `No results found on ${new URL(engine_url).hostname}. This site may have anti-bot protections active.`,
+                        suggestion: 'Try setting HEADLESS=false to solve any CAPTCHAs manually.',
+                        results: []
+                    }, null, 2);
+                }
+
+                return JSON.stringify(results, null, 2);
+            } catch (e) {
+                return JSON.stringify({
+                    error: `Search failed: ${e.message}`,
+                    results: []
+                }, null, 2);
+            }
         }
     });
 };
@@ -86,7 +102,7 @@ server.addTool({
     description: 'Run multiple search queries in parallel across different engines.',
     parameters: z.object({
         queries: z.array(z.string()).min(1).max(10).describe('List of search queries'),
-        engine: z.enum(['google', 'bing', 'yandex']).default('google').describe('Search engine to use')
+        engine: z.enum(['duckduckgo', 'bing', 'yandex']).default('duckduckgo').describe('Search engine to use')
     }),
     execute: async ({ queries, engine }) => {
         const engine_url = SEARCH_ENGINES[engine.toUpperCase()];
@@ -109,8 +125,7 @@ server.addTool({
 // --- DATA-DRIVEN TOOL REGISTRATION ---
 
 const SEARCH_TOOLS = [
-    { name: 'osint_search_google', desc: 'Search Google.', url: SEARCH_ENGINES.GOOGLE, sel: SELECTORS.GOOGLE },
-    { name: 'osint_search_duckduckgo', desc: 'Search DuckDuckGo.', url: SEARCH_ENGINES.DUCKDUCKGO, sel: SELECTORS.DUCKDUCKGO },
+    { name: 'osint_search_duckduckgo', desc: 'Search DuckDuckGo (High Success Rate).', url: SEARCH_ENGINES.DUCKDUCKGO, sel: SELECTORS.DUCKDUCKGO },
     { name: 'osint_search_bing', desc: 'Search Bing.', url: SEARCH_ENGINES.BING, sel: SELECTORS.BING },
     { name: 'osint_search_yandex', desc: 'Search Yandex.', url: SEARCH_ENGINES.YANDEX, sel: SELECTORS.YANDEX },
     { name: 'osint_amazon_search', desc: 'Search Amazon products.', url: SEARCH_ENGINES.AMAZON, sel: SELECTORS.AMAZON },
@@ -127,15 +142,12 @@ const SEARCH_TOOLS = [
     { name: 'osint_search_stackoverflow', desc: 'Search StackOverflow questions.', url: SEARCH_ENGINES.STACKOVERFLOW, sel: SELECTORS.STACKOVERFLOW },
     { name: 'osint_search_booking', desc: 'Search Booking.com for hotels.', url: SEARCH_ENGINES.BOOKING, sel: SELECTORS.BOOKING },
     { name: 'osint_search_indeed', desc: 'Search Indeed for jobs.', url: SEARCH_ENGINES.INDEED, sel: SELECTORS.INDEED },
-    { name: 'osint_search_reuters', desc: 'Search Reuters for news.', url: SEARCH_ENGINES.REUTERS, sel: SELECTORS.REUTERS },
     { name: 'osint_search_walmart', desc: 'Search Walmart products.', url: SEARCH_ENGINES.WALMART, sel: SELECTORS.WALMART },
     { name: 'osint_search_bestbuy', desc: 'Search BestBuy products.', url: SEARCH_ENGINES.BESTBUY, sel: SELECTORS.BESTBUY },
     { name: 'osint_search_playstore', desc: 'Search Google Play Store apps.', url: SEARCH_ENGINES.PLAY_STORE, sel: SELECTORS.PLAY_STORE },
-    { name: 'osint_search_appstore', desc: 'Search Apple App Store apps (via Google).', url: SEARCH_ENGINES.APPLE_APP_STORE, sel: SELECTORS.GOOGLE },
     { name: 'osint_search_etsy', desc: 'Search Etsy products.', url: SEARCH_ENGINES.ETSY, sel: SELECTORS.ETSY },
     { name: 'osint_search_zara', desc: 'Search Zara products.', url: SEARCH_ENGINES.ZARA, sel: SELECTORS.ZARA },
     { name: 'osint_search_homedepot', desc: 'Search HomeDepot products.', url: SEARCH_ENGINES.HOMEDEPOT, sel: SELECTORS.HOMEDEPOT },
-    { name: 'osint_search_linkedin_company', desc: 'Search LinkedIn company profiles (via Google).', url: SEARCH_ENGINES.LINKEDIN_COMPANY_SEARCH, sel: SELECTORS.GOOGLE },
 ];
 
 SEARCH_TOOLS.forEach(tool => {
@@ -333,18 +345,6 @@ server.addTool({
             };
         }, SELECTORS.APPLE_APP_STORE_APP);
         return JSON.stringify(data, null, 2);
-    }
-});
-
-server.addTool({
-    name: 'osint_reuters_article',
-    description: 'Get deep structured data for a Reuters news article.',
-    parameters: z.object({
-        url: z.string().url().describe('Reuters news article URL')
-    }),
-    execute: async({url})=>{
-        const html = await local_scrape(url);
-        return await to_readable_markdown(html, url);
     }
 });
 

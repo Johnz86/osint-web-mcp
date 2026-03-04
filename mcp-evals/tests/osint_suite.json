@@ -1,11 +1,11 @@
 [
   {
-    "title": "Search - Google Research",
-    "query": "Search Google for the latest news on SpaceX Starship and return top links",
+    "title": "Search - DuckDuckGo Research",
+    "query": "Search DuckDuckGo for the latest news on SpaceX Starship and return top links",
     "runs": 1,
     "model": "llama3",
     "provider": "ollama",
-    "expectedToolCalls": ["osint_search_google"],
+    "expectedToolCalls": ["osint_search_duckduckgo"],
     "selectedServers": ["osint-web-mcp"]
   },
   {

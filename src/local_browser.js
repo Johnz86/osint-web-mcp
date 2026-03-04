@@ -5,10 +5,39 @@ import { chromium } from 'playwright-extra';
 import stealth_plugin from 'puppeteer-extra-plugin-stealth';
 import { Aria_snapshot_filter } from './aria_snapshot_filter.js';
 import { BROWSER_CONFIG } from './constants.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
 
 // Apply stealth plugin globally
 const chromium_stealth = chromium;
 chromium_stealth.use(stealth_plugin());
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const USER_DATA_DIR = path.resolve(__dirname, '..', '.browser_cache');
+
+/**
+ * Attempt to locate a local Chromium-based browser (Brave, Chrome, or Chromium).
+ */
+const find_browser_path = () => {
+    const browsers = [
+        'brave-browser',
+        'brave',
+        'google-chrome',
+        'google-chrome-stable',
+        'chromium-browser',
+        'chromium'
+    ];
+
+    for (const name of browsers) {
+        try {
+            return execSync(`which ${name}`, { stdio: 'pipe' }).toString().trim();
+        } catch (e) {
+            continue;
+        }
+    }
+    return null;
+};
 
 /**
  * LocalBrowser: Manages a local stealth-enabled Playwright instance.
@@ -27,11 +56,21 @@ export class LocalBrowser {
      * Initialize the browser, context, and request listeners.
      */
     async initialize() {
-        if (this.browser) return;
+        if (this.context) return;
 
-        console.error('Launching local stealth browser...');
-        this.browser = await chromium_stealth.launch({
+        const executablePath = find_browser_path();
+        if (!executablePath) {
+            console.error('⚠️ No compatible Chromium-based browser found (Brave, Chrome, or Chromium).');
+        }
+
+        console.error(`Launching local stealth browser with user data: ${USER_DATA_DIR}...`);
+        
+        // Use launchPersistentContext to support User Data Dir
+        this.context = await chromium_stealth.launchPersistentContext(USER_DATA_DIR, {
+            executablePath: executablePath || undefined,
             headless: this.is_headless,
+            viewport: BROWSER_CONFIG.DEFAULT_VIEWPORT,
+            userAgent: process.env.USER_AGENT || BROWSER_CONFIG.DEFAULT_USER_AGENT,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -39,10 +78,12 @@ export class LocalBrowser {
             ]
         });
 
-        this.context = await this.browser.newContext({
-            viewport: BROWSER_CONFIG.DEFAULT_VIEWPORT,
-            userAgent: process.env.USER_AGENT || BROWSER_CONFIG.DEFAULT_USER_AGENT
-        });
+        // In persistent context, the context represents the browser lifetime
+        this.browser = this.context.browser();
+
+        if (process.env.DEBUG === 'true') {
+            console.error(`Browser initialized. Headless: ${this.is_headless}. Path: ${executablePath}`);
+        }
 
         this.setup_network_tracking();
     }
@@ -80,6 +121,12 @@ export class LocalBrowser {
     async get_active_page(options = {}) {
         await this.initialize();
         
+        // In persistent context, one page is usually already open
+        const pages = this.context.pages();
+        if (pages.length > 0 && (!this.page || this.page.isClosed())) {
+            this.page = pages[0];
+        }
+
         if (!this.page || this.page.isClosed()) {
             this.page = await this.context.newPage();
         }
@@ -122,8 +169,8 @@ export class LocalBrowser {
      * Gracefully close all browser resources.
      */
     async shutdown() {
-        if (this.browser) {
-            await this.browser.close();
+        if (this.context) {
+            await this.context.close();
             this.browser = null;
             this.context = null;
             this.page = null;

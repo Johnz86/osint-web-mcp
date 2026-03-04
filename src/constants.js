@@ -27,7 +27,7 @@ export const SEARCH_ENGINES = {
     LINKEDIN: 'https://www.linkedin.com/jobs/search?keywords=',
     TWITTER_X: 'https://twitter.com/search?f=live&q=',
     HACKER_NEWS_SEARCH: 'https://hn.algolia.com/?q=',
-    WIKIPEDIA: 'https://en.wikipedia.org/w/index.php?search=',
+    WIKIPEDIA: 'https://en.wikipedia.org/w/index.php?fulltext=1&search=',
     CRAIGSLIST: 'https://craigslist.org/search/sss?query=',
     STACKOVERFLOW: 'https://stackoverflow.com/search?q=',
     YAHOO_FINANCE: 'https://finance.yahoo.com/quote/',
@@ -245,10 +245,10 @@ export const SELECTORS = {
         SUBTITLE: '.s-item__subtitle'
     },
     GITHUB: {
-        CONTAINER: 'div.js-repo-list-item, div.Box-row',
-        TITLE: 'a.v-align-middle, a[data-testid="results-list-item-title"]',
-        LINK: 'a.v-align-middle, a[data-testid="results-list-item-title"]',
-        SNIPPET: 'p.mb-1, span.flex-1',
+        CONTAINER: 'div.fXzjPH, div.js-repo-list-item, div.Box-row',
+        TITLE: '.search-title a, a.v-align-middle, a[data-testid="results-list-item-title"]',
+        LINK: '.search-title a, a.v-align-middle, a[data-testid="results-list-item-title"]',
+        SNIPPET: 'span.search-match, p.mb-1, span.flex-1',
         STARS: 'a.Link--muted, span.flex-items-center'
     },
     REDDIT: {

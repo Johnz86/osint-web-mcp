@@ -18,10 +18,17 @@ import strip from 'strip-markdown';
  */
 export const local_scrape = async(url, extractor = null, arg = null)=>{
     const browser = await get_browser_instance();
-    const page = await browser.get_active_page();
+    // Ensure we use the same robust navigation logic as browser_tools
+    const page = await browser.get_active_page({ url });
     
+    if (process.env.DEBUG === 'true') {
+        console.error(`Navigating to ${url}...`);
+    }
+
     try {
-        await page.goto(url, {waitUntil: 'domcontentloaded', timeout: 30000});
+        // Wait for dynamic content
+        await page.waitForTimeout(2000);
+
         if (extractor)
             return await page.evaluate(extractor, arg);
         return await page.content();
@@ -37,9 +44,9 @@ export const local_scrape = async(url, extractor = null, arg = null)=>{
  * @returns {Promise<Array>} List of structured results.
  */
 export const perform_search_scrape = async(search_url, selector_map)=>{
-    return await local_scrape(search_url, (selectors)=>{
-        return Array.from(document.querySelectorAll(selectors.CONTAINER))
-            .map(el=>{
+    const result = await local_scrape(search_url, (selectors)=>{
+        const items = Array.from(document.querySelectorAll(selectors.CONTAINER));
+        return items.map(el=>{
                 const title_el = el.querySelector(selectors.TITLE);
                 const link_el = el.querySelector(selectors.LINK);
                 const snippet_el = selectors.SNIPPET ? el.querySelector(selectors.SNIPPET) : null;
@@ -56,6 +63,12 @@ export const perform_search_scrape = async(search_url, selector_map)=>{
             })
             .filter(item=>item.title && item.link);
     }, selector_map);
+
+    if (process.env.DEBUG === 'true') {
+        console.error(`Search for ${search_url} returned ${result?.length || 0} results.`);
+    }
+
+    return result;
 };
 
 /**
@@ -66,11 +79,32 @@ export const perform_search_scrape = async(search_url, selector_map)=>{
  */
 export const to_readable_markdown = async(html, url)=>{
     const dom = new JSDOM(html, {url});
-    const reader = new Readability(dom.window.document);
-    const article = reader.parse();
+    const doc = dom.window.document;
     
-    if (!article)
-        throw new Error('Failed to parse content with readability');
+    // Surgical bot detection check (only in title or main heading)
+    const title = doc.title?.toLowerCase() || '';
+    const h1 = doc.querySelector('h1')?.innerText?.toLowerCase() || '';
+    const bot_indicators = ['unusual traffic', 'captcha', 'bot detection', 'verify you are human', 'access denied'];
+    
+    if (bot_indicators.some(ind => title.includes(ind) || h1.includes(ind))) {
+        throw new Error(`Scraper blocked by bot detection on ${new URL(url).hostname}.`);
+    }
+
+    const reader = new Readability(doc);
+    let article = reader.parse();
+    
+    if (!article) {
+        // Fallback: Try to get basic body text if readability fails
+        const bodyText = doc.body?.textContent?.trim();
+        if (bodyText && bodyText.length > 200) {
+            article = {
+                title: doc.title || 'Extracted Page Content',
+                textContent: bodyText
+            };
+        } else {
+            throw new Error(`Failed to parse meaningful content from ${url}.`);
+        }
+    }
         
     const result = await remark()
         .use(strip, {keep: ['link', 'linkReference', 'code', 'inlineCode']})
