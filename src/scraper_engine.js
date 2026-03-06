@@ -12,10 +12,10 @@ import { BOT_INDICATORS } from './constants.js';
 
 /**
  * Execute a local browser-based scrape with optional extraction.
- * @param {string} url - The URL to navigate to.
- * @param {Function} [extractor=null] - A Playwright page.evaluate function for custom extraction.
- * @param {any} [arg=null] - Argument to pass to the extractor function.
- * @returns {Promise<any>} The extracted data or full page content.
+ * @param {string} url
+ * @param {Function} [extractor=null]
+ * @param {any} [arg=null]
+ * @returns {Promise<any>}
  */
 export const local_scrape = async (url, extractor = null, arg = null) => {
     const browser = await get_browser_instance();
@@ -25,11 +25,19 @@ export const local_scrape = async (url, extractor = null, arg = null) => {
         console.error(`Navigating to ${url}...`);
     }
 
+    const html = await page.content();
+    const lower_html = html.toLowerCase();
+    const is_blocked = BOT_INDICATORS.some(ind => lower_html.includes(ind));
+    
+    if (is_blocked) {
+        throw new Error(`Scraper blocked by bot detection on ${new URL(url).hostname}. Try setting HEADLESS=false.`);
+    }
+
     try {
         if (extractor) {
             return await page.evaluate(extractor, arg);
         }
-        return await page.content();
+        return html;
     } catch (e) {
         throw new Error(`Scrape failed for ${url}: ${e.message}`);
     }
@@ -37,15 +45,56 @@ export const local_scrape = async (url, extractor = null, arg = null) => {
 
 /**
  * Perform a search and extract results based on a provided selector map.
- * @param {string} search_url - The search engine URL including query.
- * @param {Object} selector_map - A map of CSS selectors for container, title, link, snippet.
- * @returns {Promise<Array>} List of structured results.
+ * @param {string} search_url
+ * @param {Object} selector_map
+ * @returns {Promise<Array>}
  */
 export const perform_search_scrape = async (search_url, selector_map) => {
-    const result = await local_scrape(search_url, (selectors) => {
+    const browser = await get_browser_instance();
+    const page = await browser.get_active_page({ url: search_url });
+
+    if (process.env.DEBUG === 'true') {
+        console.error(`Waiting for search results on ${search_url}...`);
+    }
+
+    await _wait_for_results(page, selector_map.CONTAINER);
+
+    let results = await _extract_results(page, selector_map);
+
+    if ((!results || results.length === 0) && !browser.is_headless) {
+        results = await _handle_empty_results(browser, page, search_url, selector_map);
+    }
+
+    if (process.env.DEBUG === 'true') {
+        console.error(`Search for ${search_url} returned ${results?.length || 0} results.`);
+    }
+
+    return results;
+};
+
+/**
+ * Waits for the results container to appear.
+ * @private
+ */
+async function _wait_for_results(page, container_selector) {
+    try {
+        await page.waitForSelector(container_selector, { timeout: 10000 });
+        await page.waitForTimeout(1000);
+    } catch (e) {
+        if (process.env.DEBUG === 'true') {
+            console.error(`Timeout waiting for selector: ${container_selector}`);
+        }
+    }
+}
+
+/**
+ * Executes the extraction logic in the page context.
+ * @private
+ */
+async function _extract_results(page, selector_map) {
+    return await page.evaluate((selectors) => {
         const items = Array.from(document.querySelectorAll(selectors.CONTAINER));
         return items.map(el => {
-            // Optional skip logic for skeleton loaders or ads
             if (selectors.SKIP && el.querySelector(selectors.SKIP)) return null;
 
             const title_el = el.querySelector(selectors.TITLE);
@@ -57,12 +106,16 @@ export const perform_search_scrape = async (search_url, selector_map) => {
             const reviews_el = selectors.REVIEWS ? el.querySelector(selectors.REVIEWS) : null;
             const image_el = selectors.IMAGE ? el.querySelector(selectors.IMAGE) : null;
 
-            // Fallback for link: if specific LINK is not found, use THREAD_LINK
-            const final_link = link_el?.href || link_el?.getAttribute('href') || thread_el?.href || thread_el?.getAttribute('href');
+            let final_link = null;
+            if (el.tagName === 'A') {
+                final_link = el.href || el.getAttribute('href');
+            } else {
+                final_link = link_el?.href || link_el?.getAttribute('href') || thread_el?.href || thread_el?.getAttribute('href');
+            }
 
             return {
                 id: selectors.ID_ATTR ? el.getAttribute(selectors.ID_ATTR) : null,
-                title: title_el?.innerText.trim(),
+                title: title_el?.innerText.trim() || el.innerText.split('\n')[0].trim(),
                 link: final_link,
                 commentsUrl: thread_el?.href || thread_el?.getAttribute('href'),
                 snippet: snippet_el?.innerText.trim(),
@@ -74,19 +127,36 @@ export const perform_search_scrape = async (search_url, selector_map) => {
         })
         .filter(item => item && item.title && item.link);
     }, selector_map);
+}
 
-    if (process.env.DEBUG === 'true') {
-        console.error(`Search for ${search_url} returned ${result?.length || 0} results.`);
+/**
+ * Handles cases where no results were found, potentially due to bot blocks.
+ * @private
+ */
+async function _handle_empty_results(browser, page, search_url, selector_map) {
+    const domain = new URL(search_url).hostname;
+    browser.reset_verification(domain);
+    
+    console.error(`\n⚠️ Zero results found on ${domain}. It might be a silent block or outdated selectors.`);
+    console.error(`Browser is left open for manual inspection/resolution.`);
+    
+    await browser.handle_manual_captcha(page, true);
+    
+    const retry_results = await _extract_results(page, selector_map);
+    
+    if (retry_results && retry_results.length > 0) {
+        console.error(`✅ Extraction successful after manual intervention: ${retry_results.length} results.`);
+        return retry_results;
     }
-
-    return result;
-};
+    
+    return [];
+}
 
 /**
  * Checks if the page content indicates a bot detection challenge.
- * @param {Document} doc - The JSDOM document instance.
- * @param {string} url - The URL of the page.
- * @throws {Error} If bot detection is identified.
+ * @param {Document} doc
+ * @param {string} url
+ * @throws {Error}
  */
 const check_bot_detection = (doc, url) => {
     const title = doc.title?.toLowerCase() || '';
@@ -106,9 +176,9 @@ const check_bot_detection = (doc, url) => {
 
 /**
  * Parses the document into an article object using Readability.
- * @param {Document} doc - The JSDOM document instance.
- * @param {string} url - The URL for error reporting.
- * @returns {Object} The parsed article object.
+ * @param {Document} doc
+ * @param {string} url
+ * @returns {Object}
  */
 const parse_article = (doc, url) => {
     const reader = new Readability(doc);
@@ -130,9 +200,9 @@ const parse_article = (doc, url) => {
 
 /**
  * Convert raw HTML to AI-friendly Markdown using readability and remark.
- * @param {string} html - The raw HTML content.
- * @param {string} url - The original URL for link resolution.
- * @returns {Promise<string>} Cleaned Markdown string.
+ * @param {string} html
+ * @param {string} url
+ * @returns {Promise<string>}
  */
 export const to_readable_markdown = async (html, url) => {
     const dom = new JSDOM(html, { url });

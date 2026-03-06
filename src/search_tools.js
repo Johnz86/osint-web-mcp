@@ -164,7 +164,7 @@ export const register_search_tools = (server) => {
 
     register_tracked_tool(server, {
         name: 'osint_search_engine_batch',
-        description: 'Run multiple search queries in parallel across different engines.',
+        description: 'Run multiple search queries sequentially across different engines.',
         parameters: z.object({
             queries: z.array(z.string()).min(1).max(10).describe('List of search queries'),
             engine: z.enum(['duckduckgo', 'bing', 'yandex']).default('duckduckgo').describe('Search engine to use')
@@ -173,15 +173,16 @@ export const register_search_tools = (server) => {
             const engine_url = SEARCH_ENGINES[engine.toUpperCase()];
             const selectors = SELECTORS[engine.toUpperCase()];
             
-            const results = await Promise.all(queries.map(async (query) => {
+            const results = [];
+            for (const query of queries) {
                 try {
                     const url = `${engine_url}${encodeURIComponent(query)}`;
                     const data = await perform_search_scrape(url, selectors);
-                    return { query, results: data };
+                    results.push({ query, results: data });
                 } catch (e) {
-                    return { query, error: e.message };
+                    results.push({ query, error: e.message });
                 }
-            }));
+            }
             
             return JSON.stringify(results, null, 2);
         }

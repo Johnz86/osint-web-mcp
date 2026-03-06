@@ -50,10 +50,10 @@ export const SEARCH_ENGINES = {
 
 export const SELECTORS = {
     GOOGLE: {
-        CONTAINER: 'div.g',
-        TITLE: 'h3',
+        CONTAINER: 'div.g, div.V9tjod, div.tF2Cxc, div.MjjYud, div.srK7ed, div.uwS8re',
+        TITLE: 'h3, div[role="heading"], a > div > span',
         LINK: 'a',
-        SNIPPET: 'div.VwiC3b'
+        SNIPPET: 'div.VwiC3b, div.kb0980, .STZOf, .hgKElc'
     },
     TIKTOK_PROFILE: {
         TITLE: '[data-e2e="user-title"]',
@@ -107,16 +107,16 @@ export const SELECTORS = {
         LINK: 'a.Si66be'
     },
     BING: {
-        CONTAINER: 'li.b_algo',
-        TITLE: 'h2 a',
-        LINK: 'h2 a',
-        SNIPPET: 'div.b_caption p'
+        CONTAINER: 'li.b_algo, .b_algo',
+        TITLE: 'h2 a, h2, a.title',
+        LINK: 'h2 a, a',
+        SNIPPET: 'div.b_caption p, .b_algo p, .b_caption'
     },
     YANDEX: {
-        CONTAINER: 'li.serp-item',
-        TITLE: 'h2 a',
-        LINK: 'h2 a',
-        SNIPPET: 'div.organic__text'
+        CONTAINER: 'li.serp-item, .serp-item',
+        TITLE: 'h2 a, h2.OrganicTitle-LinkText, a.Link_theme_outer',
+        LINK: 'h2 a, a.Link_theme_outer, a.organic__url',
+        SNIPPET: 'div.organic__text, .Organic-ContentWrapper, .TextContainer'
     },
     AMAZON_PRODUCT: {
         TITLE: '#productTitle',
@@ -277,11 +277,11 @@ export const SELECTORS = {
         SNIPPET: 'div[data-testid="tweetText"]'
     },
     GOOGLE_NEWS: {
-        CONTAINER: 'div.SoS9be, div.g',
-        TITLE: 'div[role="heading"], h3',
+        CONTAINER: 'a.WlydOe, a.WlyYGe, a.SoS9be, div.g, article, a:has(div[role="heading"]), a:has(h3)',
+        TITLE: 'div[role="heading"], h3, h4, div.n7vBic, div.n0jPhd',
         LINK: 'a',
-        SNIPPET: '.OSrXXb',
-        PRICE: '.Mg7P1b, .XTXvN'
+        THREAD_LINK: 'a',
+        SNIPPET: 'div.GI74ad, div.VwiC3b, .OSrXXb'
     },
     YOUTUBE: {
         CONTAINER: 'ytd-video-renderer',
@@ -349,5 +349,11 @@ export const BOT_INDICATORS = [
     'verify you are human',
     'access denied',
     'datadome',
-    'captcha-delivery'
+    'captcha-delivery',
+    'robot check',
+    'are you a human',
+    'checking your browser',
+    'just a moment',
+    'pardon our interruption',
+    'security check'
 ];

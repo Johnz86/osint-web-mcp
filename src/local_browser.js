@@ -4,36 +4,68 @@
 import { chromium } from 'playwright-extra';
 import stealth_plugin from 'puppeteer-extra-plugin-stealth';
 import { Aria_snapshot_filter } from './aria_snapshot_filter.js';
-import { BROWSER_CONFIG } from './constants.js';
+import { BROWSER_CONFIG, BOT_INDICATORS } from './constants.js';
 import { find_browser_path } from './utils.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import os from 'node:os';
+import fs from 'node:fs';
 
 const chromium_stealth = chromium;
 chromium_stealth.use(stealth_plugin());
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const USER_DATA_DIR = path.resolve(__dirname, '..', '.browser_cache');
+const DEFAULT_USER_DATA_DIR = path.resolve(__dirname, '..', '.browser_cache');
+
+/**
+ * Get the user data directory to use.
+ */
+const get_user_data_dir = () => {
+    if (process.env.USER_DATA_DIR) return process.env.USER_DATA_DIR;
+    
+    // Use unique temp directory in test/CI environments to avoid ProcessSingleton conflicts
+    const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST || process.env.CI;
+    if (isTest) {
+        const tempDir = path.join(os.tmpdir(), `osint-web-mcp-test-${Math.random().toString(36).substring(7)}`);
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+        return tempDir;
+    }
+    
+    return DEFAULT_USER_DATA_DIR;
+};
+
+const USER_DATA_DIR = get_user_data_dir();
 
 /**
  * Manages a local stealth-enabled Playwright instance.
- * Singleton-like behavior via get_browser_instance.
  */
 export class LocalBrowser {
-    /**
-     * @constructor
-     */
     constructor() {
         this.browser = null;
         this.context = null;
         this.page = null;
         this.network_requests = new Set();
         this.is_headless = process.env.HEADLESS !== 'false';
+        this.session_verified = new Set();
+        this._navigation_lock = Promise.resolve();
+    }
+
+    /**
+     * Resets the verification state for a domain.
+     * @param {string} [domain] - Domain to reset. If omitted, clears all.
+     */
+    reset_verification(domain) {
+        if (domain) {
+            this.session_verified.delete(domain);
+        } else {
+            this.session_verified.clear();
+        }
     }
 
     /**
      * Initializes the browser and context if not already done.
-     * @returns {Promise<void>}
      */
     async initialize() {
         if (this.context) return;
@@ -51,8 +83,8 @@ export class LocalBrowser {
             executablePath: executablePath || undefined,
             headless: this.is_headless,
             viewport: {
-                width: 1280 + Math.floor(Math.random() * 100),
-                height: 800 + Math.floor(Math.random() * 100)
+                width: BROWSER_CONFIG.DEFAULT_VIEWPORT.width + Math.floor(Math.random() * 100),
+                height: BROWSER_CONFIG.DEFAULT_VIEWPORT.height + Math.floor(Math.random() * 100)
             },
             userAgent: process.env.USER_AGENT || BROWSER_CONFIG.DEFAULT_USER_AGENT,
             args: [
@@ -65,7 +97,7 @@ export class LocalBrowser {
         this.browser = this.context.browser();
 
         if (process.env.DEBUG === 'true') {
-            console.error(`Browser initialized. Headless: ${this.is_headless}. Path: ${executablePath}`);
+            console.error(`Browser initialized. Headless: ${this.is_headless}.`);
         }
 
         this.setup_network_tracking();
@@ -99,14 +131,105 @@ export class LocalBrowser {
     }
 
     /**
+     * Checks for bot detection indicators and waits for manual resolution if not in headless mode.
+     * @param {import('playwright').Page} page
+     * @param {boolean} force - Force check even if already verified.
+     */
+    async handle_manual_captcha(page, force = false) {
+        if (this.is_headless) return;
+        
+        const domain = new URL(page.url()).hostname;
+        if (this.session_verified.has(domain) && !force) return;
+
+        const is_bot_detected = await this._check_bot_indicators(page);
+
+        if (is_bot_detected) {
+            await this._handle_bot_block(page, domain);
+        } else {
+            this.session_verified.add(domain);
+        }
+    }
+
+    /**
+     * Evaluates the page for known bot block indicators.
+     * @private
+     */
+    async _check_bot_indicators(page) {
+        return await page.evaluate((indicators) => {
+            const title = document.title?.toLowerCase() || '';
+            const h1 = document.querySelector('h1')?.innerText?.toLowerCase() || '';
+            const body = document.body?.innerText?.toLowerCase() || '';
+            
+            return indicators.some(ind => 
+                title.includes(ind) || 
+                h1.includes(ind) || 
+                body.includes(ind)
+            );
+        }, BOT_INDICATORS);
+    }
+
+    /**
+     * Notifies user and waits for manual CAPTCHA resolution.
+     * @private
+     */
+    async _handle_bot_block(page, domain) {
+        console.error(`\n🛑 BOT DETECTION DETECTED on ${domain}!`);
+        console.error('Please solve the CAPTCHA or verification challenge in the browser window.');
+        console.error('The engine will wait for you to resolve it...\n');
+        
+        try {
+            await page.waitForFunction((indicators) => {
+                const title = document.title?.toLowerCase() || '';
+                const h1 = document.querySelector('h1')?.innerText?.toLowerCase() || '';
+                const body = document.body?.innerText?.toLowerCase() || '';
+                
+                return !indicators.some(ind => 
+                    title.includes(ind) || 
+                    h1.includes(ind) || 
+                    body.includes(ind)
+                );
+            }, BOT_INDICATORS, { timeout: 120000 });
+            
+            console.error('✅ CAPTCHA resolved or bot detection cleared. Proceeding...');
+            this.session_verified.add(domain);
+            await page.waitForTimeout(2000);
+        } catch (e) {
+            console.error('⚠️ Timeout waiting for CAPTCHA resolution. Attempting to proceed anyway...');
+        }
+    }
+
+    /**
      * Returns an active page instance, navigating to a URL if provided.
-     * @param {Object} [options={}] - Page options.
-     * @param {string} [options.url] - URL to navigate to.
+     * @param {Object} [options={}]
+     * @param {string} [options.url]
      * @returns {Promise<import('playwright').Page>}
      */
     async get_active_page(options = {}) {
-        await this.initialize();
+        // Strict mutex to prevent parallel navigations on the same singleton page
+        const current_lock = this._navigation_lock;
+        let release;
+        this._navigation_lock = new Promise(res => release = res);
         
+        await current_lock;
+
+        try {
+            await this.initialize();
+            const page = await this._ensure_page();
+
+            if (options.url && page.url() !== options.url) {
+                await this._navigate_to_url(page, options.url);
+            }
+            return page;
+        } finally {
+            release();
+        }
+    }
+
+    /**
+     * Internal helper to ensure a valid page exists.
+     * @private
+     */
+    async _ensure_page() {
         const pages = this.context.pages();
         if (pages.length > 0 && (!this.page || this.page.isClosed())) {
             this.page = pages[0];
@@ -115,23 +238,47 @@ export class LocalBrowser {
         if (!this.page || this.page.isClosed()) {
             this.page = await this.context.newPage();
         }
-
-        if (options.url && this.page.url() !== options.url) {
-            await this.page.goto(options.url, { 
-                waitUntil: 'domcontentloaded', 
-                timeout: BROWSER_CONFIG.NAV_TIMEOUT 
-            });
-            // Add a small random jitter after navigation
-            const jitter = Math.floor(Math.random() * 2000) + 1000;
-            await this.page.waitForTimeout(jitter);
-        }
-
         return this.page;
     }
 
     /**
+     * Navigates to a URL and performs post-navigation checks.
+     * @private
+     */
+    async _navigate_to_url(page, url) {
+        const perform_nav = async () => {
+            try {
+                await page.evaluate(() => window.stop()).catch(() => {});
+            } catch (e) {}
+
+            await page.goto(url, { 
+                waitUntil: 'domcontentloaded', 
+                timeout: BROWSER_CONFIG.NAV_TIMEOUT 
+            });
+        };
+
+        try {
+            await perform_nav();
+        } catch (e) {
+            if (e.message.includes('interrupted')) {
+                // Retry once if interrupted by a late redirect from previous session
+                await page.waitForTimeout(500);
+                await perform_nav();
+            } else {
+                throw e;
+            }
+        }
+
+        if (!this.is_headless) {
+            await this.handle_manual_captcha(page);
+        }
+
+        const jitter = Math.floor(Math.random() * 2000) + 1000;
+        await page.waitForTimeout(jitter);
+    }
+
+    /**
      * Navigates back in history.
-     * @returns {Promise<import('playwright').Response | null>}
      */
     async go_back() {
         const page = await this.get_active_page();
@@ -140,7 +287,6 @@ export class LocalBrowser {
 
     /**
      * Navigates forward in history.
-     * @returns {Promise<import('playwright').Response | null>}
      */
     async go_forward() {
         const page = await this.get_active_page();
@@ -149,7 +295,6 @@ export class LocalBrowser {
 
     /**
      * Returns the full HTML of the current page.
-     * @returns {Promise<string>}
      */
     async get_html() {
         const page = await this.get_active_page();
@@ -158,7 +303,6 @@ export class LocalBrowser {
 
     /**
      * Closes the browser context and resets state.
-     * @returns {Promise<void>}
      */
     async shutdown() {
         if (this.context) {
@@ -171,7 +315,6 @@ export class LocalBrowser {
 
     /**
      * Clears the recorded network requests.
-     * @returns {Promise<void>}
      */
     async reset_network_log() {
         this.network_requests.clear();
@@ -179,7 +322,6 @@ export class LocalBrowser {
 
     /**
      * Returns an array of recorded network requests.
-     * @returns {Promise<Array>}
      */
     async get_network_log() {
         return Array.from(this.network_requests);
@@ -187,9 +329,6 @@ export class LocalBrowser {
 
     /**
      * Captures and optionally filters an ARIA snapshot for AI consumption.
-     * @param {Object} [options={}] - Snapshot options.
-     * @param {boolean} [options.filtered=true] - Whether to filter the snapshot.
-     * @returns {Promise<Object>}
      */
     async capture_aria_snapshot({ filtered = true } = {}) {
         const page = await this.get_active_page();
@@ -212,9 +351,6 @@ export class LocalBrowser {
 
     /**
      * Recursively formats accessibility nodes into a readable string.
-     * @param {Object} node - Snapshot node.
-     * @param {number} [indent=0] - Indentation level.
-     * @returns {string}
      */
     format_snapshot_node(node, indent = 0) {
         if (!node) return '';
@@ -232,10 +368,6 @@ export class LocalBrowser {
 
     /**
      * Resolves a Playwright locator based on ref, ID, or text.
-     * @param {Object} params - Target parameters.
-     * @param {string} params.element - Semantic element description.
-     * @param {string} params.ref - Unique reference.
-     * @returns {Promise<import('playwright').Locator>}
      */
     async resolve_locator({ element, ref }) {
         const page = await this.get_active_page();
@@ -245,9 +377,6 @@ export class LocalBrowser {
 
     /**
      * Waits for a CSS selector to become available.
-     * @param {string} selector - CSS selector.
-     * @param {number} [timeout=30000] - Timeout in ms.
-     * @returns {Promise<void>}
      */
     async wait_for_selector(selector, timeout = 30000) {
         const page = await this.get_active_page();
@@ -256,8 +385,6 @@ export class LocalBrowser {
 
     /**
      * Pauses execution for a specified duration.
-     * @param {number} ms - Milliseconds to wait.
-     * @returns {Promise<void>}
      */
     async wait_for_timeout(ms) {
         const page = await this.get_active_page();
@@ -266,8 +393,6 @@ export class LocalBrowser {
 
     /**
      * Evaluates a JavaScript expression in the page context.
-     * @param {string} expression - JS code to evaluate.
-     * @returns {Promise<any>}
      */
     async execute_expression(expression) {
         const page = await this.get_active_page();
@@ -279,7 +404,6 @@ let browser_instance = null;
 
 /**
  * Returns a singleton instance of the LocalBrowser.
- * @returns {Promise<LocalBrowser>}
  */
 export const get_browser_instance = async () => {
     if (!browser_instance) {

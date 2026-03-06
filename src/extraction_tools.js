@@ -433,8 +433,7 @@ export const register_extraction_tools = (server) => {
         }),
         execute: async({url})=>{
             const browser = await get_browser_instance();
-            const page = await browser.get_active_page();
-            await page.goto(url, {waitUntil: 'domcontentloaded'});
+            const page = await browser.get_active_page({url});
             
             try {
                 await page.waitForSelector(SELECTORS.GITHUB_FILE.RAW_URL, {timeout: 5000});
