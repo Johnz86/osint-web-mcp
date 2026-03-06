@@ -266,6 +266,19 @@ export const SELECTORS = {
         AUTHOR: 'a[href^="/r/"]',
         IMAGE: 'faceplate-img[data-testid="search_post_thumbnail"]'
     },
+    REDDIT_FEED: {
+        CONTAINER: 'shreddit-post:not([promoted])',
+        TITLE_ATTR: 'post-title',
+        LINK_ATTR: 'permalink',
+        SUBREDDIT_ATTR: 'subreddit-prefixed-name',
+        AUTHOR_ATTR: 'author',
+        SCORE_ATTR: 'score',
+        COMMENTS_ATTR: 'comment-count',
+        TIMESTAMP_ATTR: 'created-timestamp',
+        TYPE_ATTR: 'post-type',
+        DOMAIN_ATTR: 'domain',
+        EXTERNAL_LINK_ATTR: 'content-href'
+    },
     LINKEDIN: {
         CONTAINER: '.jobs-search__results-list li',
         TITLE: '.base-search-card__title',

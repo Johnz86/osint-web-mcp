@@ -511,4 +511,59 @@ export const register_extraction_tools = (server) => {
             return response.content.text;
         }
     });
+
+    register_tracked_tool(server, {
+        name: 'osint_reddit_news_feed',
+        description: 'Extract recent news from the official Reddit news feed.',
+        parameters: z.object({
+            limit: z.number().default(10).describe('Max items to extract')
+        }),
+        execute: async({limit})=>{
+            const url = 'https://www.reddit.com/?feed=news';
+            return await local_scrape(url, (selectors, limit)=>{
+                const items = Array.from(document.querySelectorAll(selectors.CONTAINER));
+                return items.slice(0, limit).map(el => ({
+                    id: el.getAttribute('id'),
+                    title: el.getAttribute(selectors.TITLE_ATTR),
+                    author: el.getAttribute(selectors.AUTHOR_ATTR),
+                    subreddit: el.getAttribute(selectors.SUBREDDIT_ATTR),
+                    score: el.getAttribute(selectors.SCORE_ATTR),
+                    commentCount: el.getAttribute(selectors.COMMENTS_ATTR),
+                    timestamp: el.getAttribute(selectors.TIMESTAMP_ATTR),
+                    type: el.getAttribute(selectors.TYPE_ATTR),
+                    link: el.getAttribute(selectors.LINK_ATTR) ? `https://www.reddit.com${el.getAttribute(selectors.LINK_ATTR)}` : null,
+                    externalLink: el.getAttribute(selectors.EXTERNAL_LINK_ATTR)
+                }));
+            }, SELECTORS.REDDIT_FEED, limit);
+        }
+    });
+
+    register_tracked_tool(server, {
+        name: 'osint_reddit_community_feed',
+        description: 'Extract recent posts from a specific Reddit community (subreddit).',
+        parameters: z.object({
+            subreddit: z.string().describe('Subreddit name (e.g., worldnews)'),
+            sort: z.enum(['hot', 'new', 'top', 'rising']).default('hot').describe('Feed sorting method'),
+            limit: z.number().default(10).describe('Max items to extract')
+        }),
+        execute: async({subreddit, sort, limit})=>{
+            const cleanSub = subreddit.startsWith('r/') ? subreddit.slice(2) : subreddit;
+            const url = `https://www.reddit.com/r/${cleanSub}/${sort}/`;
+            return await local_scrape(url, (selectors, limit)=>{
+                const items = Array.from(document.querySelectorAll(selectors.CONTAINER));
+                return items.slice(0, limit).map(el => ({
+                    id: el.getAttribute('id'),
+                    title: el.getAttribute(selectors.TITLE_ATTR),
+                    author: el.getAttribute(selectors.AUTHOR_ATTR),
+                    subreddit: el.getAttribute(selectors.SUBREDDIT_ATTR),
+                    score: el.getAttribute(selectors.SCORE_ATTR),
+                    commentCount: el.getAttribute(selectors.COMMENTS_ATTR),
+                    timestamp: el.getAttribute(selectors.TIMESTAMP_ATTR),
+                    type: el.getAttribute(selectors.TYPE_ATTR),
+                    link: el.getAttribute(selectors.LINK_ATTR) ? `https://www.reddit.com${el.getAttribute(selectors.LINK_ATTR)}` : null,
+                    externalLink: el.getAttribute(selectors.EXTERNAL_LINK_ATTR)
+                }));
+            }, SELECTORS.REDDIT_FEED, limit);
+        }
+    });
 };
