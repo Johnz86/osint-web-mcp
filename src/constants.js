@@ -176,9 +176,9 @@ export const SELECTORS = {
         AUTHOR: 'span[data-e2e="browse-username"]'
     },
     REDDIT_THREAD: {
-        TITLE: 'shreddit-title',
-        BODY: 'div[slot="text-body"]',
-        COMMENT: 'shreddit-comment'
+        TITLE: 'shreddit-title, h1[slot="title"], h1, [data-testid="post-title"]',
+        BODY: 'shreddit-post [slot="text-body"], div[id*="-post-rtjson-content"], #post-content, .post-body, [data-testid="post-content"]',
+        COMMENT: 'shreddit-comment [slot="comment"], [data-testid="comment"], .comment-body'
     },
     X_POST: {
         CONTAINER: 'article[data-testid="tweet"]',
@@ -258,10 +258,13 @@ export const SELECTORS = {
         STARS: 'a.Link--muted, span.flex-items-center'
     },
     REDDIT: {
-        CONTAINER: 'shreddit-post, div[data-testid="post-container"]',
-        TITLE: 'h3',
-        LINK: 'a[data-click-id="body"]',
-        AUTHOR: 'a[data-click-id="user_link"]'
+        CONTAINER: 'div[data-testid="search-post-with-content-preview"], [data-testid="search-sdui-post"], shreddit-post',
+        ID_ATTR: 'id',
+        TITLE: 'a[data-testid="post-title-text"], [data-testid="post-title-text"], h3',
+        LINK: 'a[data-testid="post-title-text"], a[data-testid="post-title"]',
+        SNIPPET: '[data-testid="search-counter-row"], faceplate-timeago, .text-neutral-content-weak',
+        AUTHOR: 'a[href^="/r/"]',
+        IMAGE: 'faceplate-img[data-testid="search_post_thumbnail"]'
     },
     LINKEDIN: {
         CONTAINER: '.jobs-search__results-list li',

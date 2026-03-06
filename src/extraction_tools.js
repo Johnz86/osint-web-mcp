@@ -22,14 +22,13 @@ export const register_extraction_tools = (server) => {
         }),
         execute: async({username})=>{
             const url = `${SEARCH_ENGINES.TIKTOK_PROFILE}${username}`;
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     name: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     bio: document.querySelector(selectors.BIO)?.innerText.trim(),
                     stats: document.querySelector(selectors.STATS)?.innerText.trim()
                 };
             }, SELECTORS.TIKTOK_PROFILE);
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -40,14 +39,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('YouTube video URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     description: document.querySelector(selectors.DESCRIPTION)?.innerText.trim(),
                     channel: document.querySelector(selectors.CHANNEL)?.innerText.trim()
                 };
             }, SELECTORS.YOUTUBE_VIDEO);
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -65,7 +63,7 @@ export const register_extraction_tools = (server) => {
             await page.evaluate(() => window.scrollTo(0, 1000));
             await page.waitForSelector(SELECTORS.YOUTUBE_COMMENTS.CONTAINER, {timeout: 10000});
             
-            const results = await page.evaluate(({selectors, limit}) => {
+            return await page.evaluate(({selectors, limit}) => {
                 return Array.from(document.querySelectorAll(selectors.CONTAINER))
                     .slice(0, limit)
                     .map(el=>({
@@ -73,8 +71,6 @@ export const register_extraction_tools = (server) => {
                         body: el.querySelector(selectors.BODY)?.innerText.trim()
                     }));
             }, {selectors: SELECTORS.YOUTUBE_COMMENTS, limit});
-            
-            return JSON.stringify(results, null, 2);
         }
     });
 
@@ -85,14 +81,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('TikTok video URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     stats: document.querySelector(selectors.STATS)?.innerText.trim(),
                     author: document.querySelector(selectors.AUTHOR)?.innerText.trim()
                 };
             }, SELECTORS.TIKTOK_VIDEO);
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -103,14 +98,31 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('Reddit thread URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
+                // Find comments and extract metadata
+                const commentElements = Array.from(document.querySelectorAll('shreddit-comment, .comment'));
+                const comments = commentElements.slice(0, 20).map(el => {
+                    const author = el.getAttribute('author') || el.querySelector('[data-testid="comment-author"]')?.innerText.trim();
+                    const score = el.getAttribute('score');
+                    const depth = parseInt(el.getAttribute('depth') || '0', 10);
+                    
+                    // The body is usually in a slot or a specific div
+                    const bodyEl = el.querySelector('[slot="comment"], .comment-body, div[id*="-post-rtjson-content"]');
+                    
+                    return {
+                        author,
+                        score,
+                        depth,
+                        body: bodyEl?.innerText.trim() || el.innerText.trim()
+                    };
+                });
+
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     body: document.querySelector(selectors.BODY)?.innerText.trim(),
-                    comments: Array.from(document.querySelectorAll(selectors.COMMENT)).map(el=>el.innerText.trim()).slice(0, 10)
+                    comments
                 };
-            }, SELECTORS.REDDIT_THREAD);
-            return JSON.stringify(data, null, 2);
+            }, SELECTORS.REDDIT_THREAD, SELECTORS.REDDIT_THREAD.TITLE);
         }
     });
 
@@ -121,14 +133,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('X post URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 const post = document.querySelector(selectors.CONTAINER);
                 return {
                     body: post?.querySelector(selectors.BODY)?.innerText.trim(),
                     stats: post?.querySelector(selectors.STATS)?.innerText.trim()
                 };
-            }, SELECTORS.X_POST);
-            return JSON.stringify(data, null, 2);
+            }, SELECTORS.X_POST, SELECTORS.X_POST.CONTAINER);
         }
     });
 
@@ -139,14 +150,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('LinkedIn post URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 const post = document.querySelector(selectors.CONTAINER);
                 return {
                     author: post?.querySelector(selectors.AUTHOR)?.innerText.trim(),
                     body: post?.querySelector(selectors.BODY)?.innerText.trim()
                 };
-            }, SELECTORS.LINKEDIN_POST);
-            return JSON.stringify(data, null, 2);
+            }, SELECTORS.LINKEDIN_POST, SELECTORS.LINKEDIN_POST.CONTAINER);
         }
     });
 
@@ -158,14 +168,13 @@ export const register_extraction_tools = (server) => {
         }),
         execute: async({username})=>{
             const url = `https://www.instagram.com/${username}/`;
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     name: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     bio: document.querySelector(selectors.BIO)?.innerText.trim(),
                     stats: Array.from(document.querySelectorAll(selectors.STATS)).map(el=>el.innerText.trim())
                 };
-            }, SELECTORS.INSTAGRAM_PROFILE);
-            return JSON.stringify(data, null, 2);
+            }, SELECTORS.INSTAGRAM_PROFILE, SELECTORS.INSTAGRAM_PROFILE.TITLE);
         }
     });
 
@@ -176,14 +185,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('Google Play Store app URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     description: document.querySelector(selectors.DESCRIPTION)?.innerText.trim(),
                     developer: document.querySelector(selectors.DEVELOPER)?.innerText.trim()
                 };
             }, SELECTORS.GOOGLE_PLAY_APP);
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -194,14 +202,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('Apple App Store app URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     description: document.querySelector(selectors.DESCRIPTION)?.innerText.trim(),
                     developer: document.querySelector(selectors.DEVELOPER)?.innerText.trim()
                 };
             }, SELECTORS.APPLE_APP_STORE_APP);
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -212,14 +219,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('Yahoo Finance company profile URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     summary: document.querySelector(selectors.SUMMARY)?.innerText.trim(),
                     sector: document.querySelector(selectors.SECTOR)?.innerText.trim()
                 };
             }, SELECTORS.YAHOO_FINANCE_PROFILE);
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -240,7 +246,7 @@ export const register_extraction_tools = (server) => {
                         rating: el.querySelector(selectors.RATING)?.ariaLabel
                     }));
             }, SELECTORS.GOOGLE_MAPS_REVIEWS);
-            return JSON.stringify(results.slice(0, limit), null, 2);
+            return results.slice(0, limit);
         }
     });
 
@@ -251,14 +257,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('Booking.com hotel URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     amenities: document.querySelector(selectors.AMENITIES)?.innerText.trim(),
                     rooms: document.querySelector(selectors.ROOMS)?.innerText.trim()
                 };
             }, SELECTORS.BOOKING_HOTEL);
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -269,14 +274,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('Zillow property listing URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     price: document.querySelector(selectors.PRICE)?.innerText.trim(),
                     facts: document.querySelector(selectors.FACTS)?.innerText.trim()
                 };
             }, SELECTORS.ZILLOW_PROPERTY);
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -287,14 +291,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('Amazon product URL (containing /dp/)')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     price: document.querySelector(selectors.PRICE)?.innerText.trim(),
                     features: Array.from(document.querySelectorAll(selectors.FEATURES)).map(el=>el.innerText.trim())
                 };
             }, SELECTORS.AMAZON_PRODUCT);
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -305,7 +308,7 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('Amazon product or reviews page URL')
         }),
         execute: async({url})=>{
-            const results = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return Array.from(document.querySelectorAll(selectors.CONTAINER))
                     .map(el=>({
                         title: el.querySelector(selectors.TITLE)?.innerText.trim(),
@@ -313,7 +316,6 @@ export const register_extraction_tools = (server) => {
                         body: el.querySelector(selectors.BODY)?.innerText.trim()
                     }));
             }, SELECTORS.AMAZON_REVIEWS);
-            return JSON.stringify(results, null, 2);
         }
     });
 
@@ -324,14 +326,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('Walmart product URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     price: document.querySelector(selectors.PRICE)?.innerText.trim(),
                     specifications: Array.from(document.querySelectorAll(selectors.SPECIFICATIONS)).map(el=>el.innerText.trim())
                 };
             }, SELECTORS.WALMART_PRODUCT);
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -342,14 +343,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('eBay item URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     price: document.querySelector(selectors.PRICE)?.innerText.trim(),
                     condition: document.querySelector(selectors.CONDITION)?.innerText.trim()
                 };
             }, SELECTORS.EBAY_PRODUCT);
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -360,14 +360,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('Home Depot product URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     price: document.querySelector(selectors.PRICE)?.innerText.trim(),
                     specifications: document.querySelector(selectors.SPECIFICATIONS)?.innerText.trim()
                 };
             }, SELECTORS.HOMEDEPOT_PRODUCT);
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -378,14 +377,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('Best Buy product URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     price: document.querySelector(selectors.PRICE)?.innerText.trim(),
                     specifications: document.querySelector(selectors.SPECIFICATIONS)?.innerText.trim()
                 };
             }, SELECTORS.BESTBUY_PRODUCT);
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -396,14 +394,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('Etsy product URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     price: document.querySelector(selectors.PRICE)?.innerText.trim(),
                     description: document.querySelector(selectors.DESCRIPTION)?.innerText.trim()
                 };
             }, SELECTORS.ETSY_PRODUCT);
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -414,14 +411,13 @@ export const register_extraction_tools = (server) => {
             url: z.string().url().describe('Zara product URL')
         }),
         execute: async({url})=>{
-            const data = await local_scrape(url, (selectors)=>{
+            return await local_scrape(url, (selectors)=>{
                 return {
                     title: document.querySelector(selectors.TITLE)?.innerText.trim(),
                     price: document.querySelector(selectors.PRICE)?.innerText.trim(),
                     composition: document.querySelector(selectors.COMPOSITION)?.innerText.trim()
                 };
             }, SELECTORS.ZARA_PRODUCT);
-            return JSON.stringify(data, null, 2);
         }
     });
 

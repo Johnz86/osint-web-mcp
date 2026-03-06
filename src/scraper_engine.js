@@ -15,9 +15,10 @@ import { BOT_INDICATORS } from './constants.js';
  * @param {string} url
  * @param {Function} [extractor=null]
  * @param {any} [arg=null]
+ * @param {string} [wait_selector=null]
  * @returns {Promise<any>}
  */
-export const local_scrape = async (url, extractor = null, arg = null) => {
+export const local_scrape = async (url, extractor = null, arg = null, wait_selector = null) => {
     const browser = await get_browser_instance();
     const page = await browser.get_active_page({ url });
     
@@ -25,19 +26,55 @@ export const local_scrape = async (url, extractor = null, arg = null) => {
         console.error(`Navigating to ${url}...`);
     }
 
-    const html = await page.content();
-    const lower_html = html.toLowerCase();
-    const is_blocked = BOT_INDICATORS.some(ind => lower_html.includes(ind));
+    if (wait_selector) {
+        try {
+            await page.waitForSelector(wait_selector, { timeout: 10000 });
+        } catch (e) {
+            if (process.env.DEBUG === 'true') {
+                console.error(`Timeout waiting for selector: ${wait_selector}`);
+            }
+        }
+    }
+
+    // Surgical bot detection check using visible text
+    const is_blocked = await page.evaluate((indicators) => {
+        const title = document.title?.toLowerCase() || '';
+        const h1 = document.querySelector('h1')?.innerText?.toLowerCase() || '';
+        const body = document.body?.innerText?.toLowerCase() || '';
+        
+        return indicators.some(ind => 
+            title.includes(ind) || 
+            h1.includes(ind) || 
+            body.includes(ind)
+        );
+    }, BOT_INDICATORS);
     
     if (is_blocked) {
-        throw new Error(`Scraper blocked by bot detection on ${new URL(url).hostname}. Try setting HEADLESS=false.`);
+        if (!browser.is_headless) {
+            // Give user one more chance to solve it if they haven't already
+            await browser.handle_manual_captcha(page, true);
+            
+            // Re-check after manual intervention
+            const still_blocked = await page.evaluate((indicators) => {
+                const title = document.title?.toLowerCase() || '';
+                const h1 = document.querySelector('h1')?.innerText?.toLowerCase() || '';
+                const body = document.body?.innerText?.toLowerCase() || '';
+                return indicators.some(ind => title.includes(ind) || h1.includes(ind) || body.includes(ind));
+            }, BOT_INDICATORS);
+            
+            if (still_blocked) {
+                throw new Error(`Scraper blocked by bot detection on ${new URL(url).hostname}. Try setting HEADLESS=false.`);
+            }
+        } else {
+            throw new Error(`Scraper blocked by bot detection on ${new URL(url).hostname}. Try setting HEADLESS=false.`);
+        }
     }
 
     try {
         if (extractor) {
             return await page.evaluate(extractor, arg);
         }
-        return html;
+        return await page.content();
     } catch (e) {
         throw new Error(`Scrape failed for ${url}: ${e.message}`);
     }
@@ -97,6 +134,16 @@ async function _extract_results(page, selector_map) {
         return items.map(el => {
             if (selectors.SKIP && el.querySelector(selectors.SKIP)) return null;
 
+            // Try to extract from tracking context if available (standard for modern Reddit)
+            let contextData = {};
+            const tracker = el.closest('search-telemetry-tracker') || el.querySelector('search-telemetry-tracker');
+            if (tracker) {
+                try {
+                    const attr = tracker.getAttribute('data-faceplate-tracking-context');
+                    if (attr) contextData = JSON.parse(attr);
+                } catch (e) {}
+            }
+
             const title_el = el.querySelector(selectors.TITLE);
             const link_el = el.querySelector(selectors.LINK);
             const thread_el = selectors.THREAD_LINK ? el.querySelector(selectors.THREAD_LINK) : null;
@@ -113,12 +160,25 @@ async function _extract_results(page, selector_map) {
                 final_link = link_el?.href || link_el?.getAttribute('href') || thread_el?.href || thread_el?.getAttribute('href');
             }
 
+            // Map standard fields, preferring context data for cleaner extraction
+            const id = contextData.post?.id || contextData.comment?.id || (selectors.ID_ATTR ? el.getAttribute(selectors.ID_ATTR) : null);
+            const title = contextData.post?.title || title_el?.innerText.trim() || el.innerText.split('\n')[0].trim();
+            const subreddit = contextData.subreddit?.name;
+            const contextSnippet = contextData.search?.snippet;
+
+            let snippet = snippet_el?.innerText.trim();
+            if (subreddit) {
+                snippet = `r/${subreddit}${snippet ? ' · ' + snippet : ''}`;
+            } else if (contextSnippet) {
+                snippet = contextSnippet;
+            }
+
             return {
-                id: selectors.ID_ATTR ? el.getAttribute(selectors.ID_ATTR) : null,
-                title: title_el?.innerText.trim() || el.innerText.split('\n')[0].trim(),
+                id,
+                title,
                 link: final_link,
                 commentsUrl: thread_el?.href || thread_el?.getAttribute('href'),
-                snippet: snippet_el?.innerText.trim(),
+                snippet,
                 price: price_el?.innerText.trim(),
                 rating: rating_el?.innerText.trim(),
                 reviews: reviews_el?.innerText.trim(),
@@ -159,9 +219,14 @@ async function _handle_empty_results(browser, page, search_url, selector_map) {
  * @throws {Error}
  */
 const check_bot_detection = (doc, url) => {
+    // Clone body to strip scripts/styles for a cleaner check in JSDOM
+    const bodyClone = doc.body.cloneNode(true);
+    const toRemove = bodyClone.querySelectorAll('script, style, noscript');
+    toRemove.forEach(el => el.remove());
+
     const title = doc.title?.toLowerCase() || '';
-    const h1 = doc.querySelector('h1')?.innerText?.toLowerCase() || '';
-    const body = doc.body?.innerText?.toLowerCase() || '';
+    const h1 = (doc.querySelector('h1')?.innerText || doc.querySelector('h1')?.textContent || '').toLowerCase();
+    const body = (bodyClone.innerText || bodyClone.textContent || '').toLowerCase();
     
     const is_blocked = BOT_INDICATORS.some(ind => 
         title.includes(ind) || 

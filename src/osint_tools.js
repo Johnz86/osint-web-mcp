@@ -50,7 +50,7 @@ export const register_osint_tools = (server) => {
                 }
             }));
 
-            return JSON.stringify(results, null, 2);
+            return results;
         }
     });
 
@@ -66,14 +66,12 @@ export const register_osint_tools = (server) => {
             const page = await browser.get_active_page();
             await page.goto(url, { waitUntil: 'domcontentloaded' });
             
-            const data = await page.evaluate(() => {
+            return await page.evaluate(() => {
                 const price = document.querySelector('fin-streamer[data-field="regularMarketPrice"]')?.innerText;
                 const change = document.querySelector('fin-streamer[data-field="regularMarketChangePercent"]')?.innerText;
                 const name = document.querySelector('h1')?.innerText;
                 return { name, price, change };
             });
-            
-            return JSON.stringify(data, null, 2);
         }
     });
 
@@ -84,8 +82,7 @@ export const register_osint_tools = (server) => {
             domain: z.string().describe('Domain to lookup (e.g., example.com)')
         }),
         execute: async({domain})=>{
-            const results = await whois(domain);
-            return JSON.stringify(results, null, 2);
+            return await whois(domain);
         }
     });
 
@@ -97,8 +94,7 @@ export const register_osint_tools = (server) => {
             type: z.enum(['A', 'AAAA', 'MX', 'TXT', 'NS', 'ANY']).default('A')
         }),
         execute: async({domain, type})=>{
-            const results = type === 'ANY' ? await dns.resolveAny(domain) : await dns.resolve(domain, type);
-            return JSON.stringify(results, null, 2);
+            return type === 'ANY' ? await dns.resolveAny(domain) : await dns.resolve(domain, type);
         }
     });
 
@@ -110,7 +106,7 @@ export const register_osint_tools = (server) => {
         }),
         execute: async({ip})=>{
             const response = await axios.get(`${API_ENDPOINTS.IP_API}${ip}`);
-            return JSON.stringify(response.data, null, 2);
+            return response.data;
         }
     });
 };

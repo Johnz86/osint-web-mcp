@@ -19,19 +19,19 @@ const execute_search = (engine_url, selectors, name) => async ({ query }) => {
         const results = await perform_search_scrape(url, selectors);
         
         if (!results || results.length === 0) {
-            return JSON.stringify({
+            return {
                 error: `No results found on ${new URL(engine_url).hostname}. This site may have anti-bot protections active.`,
                 suggestion: 'Try setting HEADLESS=false to solve any CAPTCHAs manually.',
                 results: []
-            }, null, 2);
+            };
         }
 
-        return JSON.stringify(results, null, 2);
+        return results;
     } catch (e) {
-        return JSON.stringify({
+        return {
             error: `Search failed for ${name}: ${e.message}`,
             results: []
-        }, null, 2);
+        };
     }
 };
 
@@ -121,14 +121,12 @@ export const register_search_tools = (server) => {
                 
                 // Real-time front page (Today's trending)
                 if (is_top && dateRange !== 'all') {
-                    const data = await local_scrape(SEARCH_ENGINES.HACKER_NEWS, extract_hn_front_page, SELECTORS.HACKER_NEWS_FRONT);
-                    return JSON.stringify(data, null, 2);
+                    return await local_scrape(SEARCH_ENGINES.HACKER_NEWS, extract_hn_front_page, SELECTORS.HACKER_NEWS_FRONT);
                 } 
                 
                 // Real-time newest
                 if (is_latest) {
-                    const data = await local_scrape(SEARCH_ENGINES.HACKER_NEWS_NEWEST, extract_hn_front_page, SELECTORS.HACKER_NEWS_FRONT);
-                    return JSON.stringify(data, null, 2);
+                    return await local_scrape(SEARCH_ENGINES.HACKER_NEWS_NEWEST, extract_hn_front_page, SELECTORS.HACKER_NEWS_FRONT);
                 }
 
                 // Keyword search or "All Time Top" via Algolia
@@ -146,18 +144,18 @@ export const register_search_tools = (server) => {
                 const results = await perform_search_scrape(url, SELECTORS.HACKER_NEWS);
                 
                 if (!results || results.length === 0) {
-                    return JSON.stringify({
+                    return {
                         error: `No results found on Hacker News for "${query}".`,
                         results: []
-                    }, null, 2);
+                    };
                 }
 
-                return JSON.stringify(results, null, 2);
+                return results;
             } catch (e) {
-                return JSON.stringify({
+                return {
                     error: `Search failed for Hacker News: ${e.message}`,
                     results: []
-                }, null, 2);
+                };
             }
         }
     });
@@ -184,7 +182,7 @@ export const register_search_tools = (server) => {
                 }
             }
             
-            return JSON.stringify(results, null, 2);
+            return results;
         }
     });
 };

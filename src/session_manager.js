@@ -26,7 +26,7 @@ export const get_session_stats = () => {
 };
 
 /**
- * Wraps an MCP tool execution to automatically track its usage.
+ * Wraps an MCP tool execution to automatically track its usage and ensure valid response format.
  * @param {import('fastmcp').FastMCP} server - The FastMCP server instance.
  * @param {Object} tool - The tool object to register.
  */
@@ -34,7 +34,14 @@ export const register_tracked_tool = (server, tool) => {
     const original_execute = tool.execute;
     tool.execute = async (args, ctx) => {
         track_tool_call(tool.name);
-        return await original_execute(args, ctx);
+        const result = await original_execute(args, ctx);
+        
+        // Automatically stringify objects to JSON if they aren't already MCP response objects
+        if (typeof result === 'object' && result !== null && !result.content) {
+            return JSON.stringify(result, null, 2);
+        }
+        
+        return result;
     };
     server.addTool(tool);
 };
