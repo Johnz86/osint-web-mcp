@@ -15,18 +15,19 @@ export const SEARCH_ENGINES = {
     GOOGLE: 'https://www.google.com/search?q=',
     GOOGLE_NEWS: 'https://www.google.com/search?tbm=nws&q=',
     YOUTUBE: 'https://www.youtube.com/results?search_query=',
-    HACKER_NEWS: 'https://hn.algolia.com/?q=',
+    HACKER_NEWS: 'https://news.ycombinator.com/',
+    HACKER_NEWS_NEWEST: 'https://news.ycombinator.com/newest',
+    HACKER_NEWS_SEARCH: 'https://hn.algolia.com/?q=',
     EBAY: 'https://www.ebay.com/sch/i.html?_nkw=',
     AMAZON: 'https://www.amazon.com/s?k=',
     GITHUB: 'https://github.com/search?type=repositories&q=',
     REDDIT: 'https://www.reddit.com/search/?q=',
     LINKEDIN_JOBS: 'https://www.linkedin.com/jobs/search?keywords=',
     TWITTER: 'https://twitter.com/search?f=live&q=',
+    TWITTER_X: 'https://twitter.com/search?f=live&q=',
     GOOGLE_MAPS: 'https://www.google.com/maps/search/',
     ZILLOW: 'https://www.zillow.com/homes/',
     LINKEDIN: 'https://www.linkedin.com/jobs/search?keywords=',
-    TWITTER_X: 'https://twitter.com/search?f=live&q=',
-    HACKER_NEWS_SEARCH: 'https://hn.algolia.com/?q=',
     WIKIPEDIA: 'https://en.wikipedia.org/w/index.php?fulltext=1&search=',
     CRAIGSLIST: 'https://craigslist.org/search/sss?query=',
     STACKOVERFLOW: 'https://stackoverflow.com/search?q=',
@@ -38,7 +39,7 @@ export const SEARCH_ENGINES = {
     PLAY_STORE: 'https://play.google.com/store/search?q=',
     APPLE_APP_STORE: 'https://www.google.com/search?q=site:apps.apple.com+',
     WALMART: 'https://www.walmart.com/search?q=',
-    BESTBUY: 'https://www.bestbuy.com/site/searchpage.jsp?st=',
+    BESTBUY: 'https://www.bestbuy.com/site/searchpage.jsp?intl=nosplash&st=',
     REUTERS: 'https://www.reuters.com/site-search/?query=',
     ETSY: 'https://www.etsy.com/search?q=',
     ZARA: 'https://www.zara.com/us/en/search?searchTerm=',
@@ -72,10 +73,15 @@ export const SELECTORS = {
         PRICE: 'div[data-automation-id="product-price"]'
     },
     BESTBUY: {
-        CONTAINER: 'li.sku-item',
-        TITLE: 'h4.sku-title a',
-        LINK: 'h4.sku-title a',
-        PRICE: 'div.priceView-hero-price span'
+        CONTAINER: 'li.product-list-item.grid-view, li.sku-item, .sku-item-list > li',
+        SKIP: '.skeleton-product-grid-view',
+        ID_ATTR: 'data-testid',
+        TITLE: '.product-title, h4.sku-title, .sku-title',
+        LINK: 'a.product-list-item-link, h4.sku-title a, a.sku-title',
+        PRICE: '[data-testid="price-block-customer-price"], div[data-testid="customer-price"] span[aria-hidden="true"], .priceView-customer-price span, .priceView-hero-price span',
+        RATING: '.ratings .font-weight-bold',
+        REVIEWS: '.c-reviews',
+        IMAGE: '[data-testid="product-image"]'
     },
     ETSY: {
         CONTAINER: '.v2-listing-card, .wt-grid__item-section',
@@ -222,7 +228,7 @@ export const SELECTORS = {
     },
     GITHUB_FILE: {
         CONTENT: 'div.blob-wrapper table',
-        RAW_URL: 'a[data-testid="raw-button"]'
+        RAW_URL: 'a[data-testid="raw-button"], a[aria-label="Download raw content"]'
     },
     DUCKDUCKGO: {
         CONTAINER: 'article[data-testid="result"]',
@@ -287,9 +293,16 @@ export const SELECTORS = {
     HACKER_NEWS: {
         CONTAINER: '.Story',
         TITLE: '.Story_title a span',
-        LINK: '.Story_title a',
-        SNIPPET: '.Story_meta span:nth-child(2) a',
+        LINK: 'a.Story_link',
+        THREAD_LINK: '.Story_title a',
+        SNIPPET: '.Story_comment',
         PRICE: '.Story_meta span:first-child'
+    },
+    HACKER_NEWS_FRONT: {
+        CONTAINER: 'tr.athing',
+        TITLE: 'span.titleline > a',
+        LINK: 'span.titleline > a',
+        METADATA: '.subtext'
     },
     WIKIPEDIA: {
         CONTAINER: 'li.mw-search-result',

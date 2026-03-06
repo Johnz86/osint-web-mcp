@@ -26,15 +26,6 @@ export const local_scrape = async (url, extractor = null, arg = null) => {
     }
 
     try {
-        // Wait for dynamic content and mimic human presence
-        await page.waitForTimeout(2000);
-        
-        // Scroll a bit to trigger lazy loading and look more human
-        await page.evaluate(() => {
-            window.scrollBy(0, 500);
-        });
-        await page.waitForTimeout(1000);
-
         if (extractor) {
             return await page.evaluate(extractor, arg);
         }
@@ -54,21 +45,34 @@ export const perform_search_scrape = async (search_url, selector_map) => {
     const result = await local_scrape(search_url, (selectors) => {
         const items = Array.from(document.querySelectorAll(selectors.CONTAINER));
         return items.map(el => {
+            // Optional skip logic for skeleton loaders or ads
+            if (selectors.SKIP && el.querySelector(selectors.SKIP)) return null;
+
             const title_el = el.querySelector(selectors.TITLE);
             const link_el = el.querySelector(selectors.LINK);
+            const thread_el = selectors.THREAD_LINK ? el.querySelector(selectors.THREAD_LINK) : null;
             const snippet_el = selectors.SNIPPET ? el.querySelector(selectors.SNIPPET) : null;
             const price_el = selectors.PRICE ? el.querySelector(selectors.PRICE) : null;
             const rating_el = selectors.RATING ? el.querySelector(selectors.RATING) : null;
+            const reviews_el = selectors.REVIEWS ? el.querySelector(selectors.REVIEWS) : null;
+            const image_el = selectors.IMAGE ? el.querySelector(selectors.IMAGE) : null;
+
+            // Fallback for link: if specific LINK is not found, use THREAD_LINK
+            const final_link = link_el?.href || link_el?.getAttribute('href') || thread_el?.href || thread_el?.getAttribute('href');
 
             return {
+                id: selectors.ID_ATTR ? el.getAttribute(selectors.ID_ATTR) : null,
                 title: title_el?.innerText.trim(),
-                link: link_el?.href,
+                link: final_link,
+                commentsUrl: thread_el?.href || thread_el?.getAttribute('href'),
                 snippet: snippet_el?.innerText.trim(),
                 price: price_el?.innerText.trim(),
-                rating: rating_el?.innerText.trim()
+                rating: rating_el?.innerText.trim(),
+                reviews: reviews_el?.innerText.trim(),
+                imageUrl: image_el?.src || image_el?.getAttribute('src')
             };
         })
-        .filter(item => item.title && item.link);
+        .filter(item => item && item.title && item.link);
     }, selector_map);
 
     if (process.env.DEBUG === 'true') {
@@ -141,5 +145,5 @@ export const to_readable_markdown = async (html, url) => {
         .use(strip, { keep: ['link', 'linkReference', 'code', 'inlineCode'] })
         .process(article.textContent);
         
-    return `# ${article.title}\n\n${result.value}`;
+    return `# ${article.title}\\n\\n${result.value}`;
 };

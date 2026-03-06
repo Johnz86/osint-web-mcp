@@ -436,11 +436,16 @@ export const register_extraction_tools = (server) => {
             const page = await browser.get_active_page();
             await page.goto(url, {waitUntil: 'domcontentloaded'});
             
-            const raw_url = await page.getAttribute(SELECTORS.GITHUB_FILE.RAW_URL, 'href');
-            if (raw_url) {
-                const absolute_raw = raw_url.startsWith('http') ? raw_url : `https://github.com${raw_url}`;
-                const response = await axios.get(absolute_raw);
-                return typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+            try {
+                await page.waitForSelector(SELECTORS.GITHUB_FILE.RAW_URL, {timeout: 5000});
+                const raw_url = await page.locator(SELECTORS.GITHUB_FILE.RAW_URL).first().getAttribute('href');
+                if (raw_url) {
+                    const absolute_raw = raw_url.startsWith('http') ? raw_url : `https://github.com${raw_url}`;
+                    const response = await axios.get(absolute_raw);
+                    return typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+                }
+            } catch (e) {
+                // Fallback to reading the whole page text if the raw button isn't found
             }
             
             return await page.innerText('body');

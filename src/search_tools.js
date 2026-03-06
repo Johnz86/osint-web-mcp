@@ -3,7 +3,7 @@
  */
 import { z } from 'zod';
 import { SEARCH_ENGINES, SELECTORS } from './constants.js';
-import { perform_search_scrape } from './scraper_engine.js';
+import { perform_search_scrape, local_scrape } from './scraper_engine.js';
 import { register_tracked_tool } from './session_manager.js';
 
 /**
@@ -36,6 +36,34 @@ const execute_search = (engine_url, selectors, name) => async ({ query }) => {
 };
 
 /**
+ * Extractor for Hacker News official front-page layout.
+ * @param {Object} selectors - CSS selectors from SELECTORS.HACKER_NEWS_FRONT.
+ * @returns {Array} List of extracted story objects.
+ */
+const extract_hn_front_page = (selectors) => {
+    const items = Array.from(document.querySelectorAll(selectors.CONTAINER));
+    return items.map(el => {
+        const title_el = el.querySelector(selectors.TITLE);
+        const link_el = el.querySelector(selectors.LINK);
+        const meta_row = el.nextElementSibling;
+        const points_el = meta_row?.querySelector('.score');
+        const author_el = meta_row?.querySelector('.hnuser');
+        const age_el = meta_row?.querySelector('.age a');
+        
+        const item_links = Array.from(meta_row?.querySelectorAll('a[href^="item?id="]') || []);
+        const comments_el = item_links.find(a => a.innerText.toLowerCase().includes('comment'));
+        const comments_text = comments_el?.innerText.trim() || '0 comments';
+        
+        return {
+            title: title_el?.innerText.trim(),
+            link: link_el?.href || link_el?.getAttribute('href'),
+            snippet: `${points_el?.innerText || '0 points'} by ${author_el?.innerText || 'unknown'} | ${age_el?.innerText || ''} | ${comments_text}`,
+            commentsUrl: age_el?.href || age_el?.getAttribute('href')
+        };
+    }).filter(item => item.title && item.link);
+};
+
+/**
  * Registers a set of search tools on the provided FastMCP server.
  * @param {import('fastmcp').FastMCP} server - The FastMCP server instance.
  */
@@ -53,7 +81,6 @@ export const register_search_tools = (server) => {
         { name: 'osint_twitter_search', desc: 'Search Twitter (X).', url: SEARCH_ENGINES.TWITTER_X, sel: SELECTORS.TWITTER },
         { name: 'osint_google_news_search', desc: 'Search Google News.', url: SEARCH_ENGINES.GOOGLE_NEWS, sel: SELECTORS.GOOGLE_NEWS },
         { name: 'osint_youtube_search', desc: 'Search YouTube videos.', url: SEARCH_ENGINES.YOUTUBE, sel: SELECTORS.YOUTUBE },
-        { name: 'osint_hacker_news_search', desc: 'Search Hacker News stories.', url: SEARCH_ENGINES.HACKER_NEWS_SEARCH, sel: SELECTORS.HACKER_NEWS },
         { name: 'osint_search_wikipedia', desc: 'Search Wikipedia articles.', url: SEARCH_ENGINES.WIKIPEDIA, sel: SELECTORS.WIKIPEDIA },
         { name: 'osint_search_craigslist', desc: 'Search Craigslist.', url: SEARCH_ENGINES.CRAIGSLIST, sel: SELECTORS.CRAIGSLIST },
         { name: 'osint_search_stackoverflow', desc: 'Search StackOverflow questions.', url: SEARCH_ENGINES.STACKOVERFLOW, sel: SELECTORS.STACKOVERFLOW },
@@ -77,6 +104,63 @@ export const register_search_tools = (server) => {
             execute: execute_search(tool.url, tool.sel, tool.name)
         });
     }
+
+    register_tracked_tool(server, {
+        name: 'osint_hacker_news_search',
+        description: 'Search Hacker News for stories. Use "top" for real-time front-page stories, or "latest" for newest submissions. Supports date filtering for popular stories.',
+        parameters: z.object({
+            query: z.string().describe('Search query for Hacker News. "top" returns front-page stories, "latest" returns newest stories.'),
+            sort: z.enum(['date', 'popularity']).default('date').describe('Sort order: "date" for newest first, "popularity" for top stories.'),
+            dateRange: z.enum(['all', 'pastDay', 'pastWeek', 'pastMonth', 'pastYear']).default('pastWeek').describe('Date range for popularity sorting. Defaults to pastWeek for keyword searches.')
+        }),
+        execute: async ({ query, sort, dateRange }) => {
+            try {
+                const q = query.toLowerCase();
+                const is_top = ['top', 'trending', 'frontpage'].includes(q);
+                const is_latest = ['latest', 'newest', 'new'].includes(q);
+                
+                // Real-time front page (Today's trending)
+                if (is_top && dateRange !== 'all') {
+                    const data = await local_scrape(SEARCH_ENGINES.HACKER_NEWS, extract_hn_front_page, SELECTORS.HACKER_NEWS_FRONT);
+                    return JSON.stringify(data, null, 2);
+                } 
+                
+                // Real-time newest
+                if (is_latest) {
+                    const data = await local_scrape(SEARCH_ENGINES.HACKER_NEWS_NEWEST, extract_hn_front_page, SELECTORS.HACKER_NEWS_FRONT);
+                    return JSON.stringify(data, null, 2);
+                }
+
+                // Keyword search or "All Time Top" via Algolia
+                let sort_param = sort === 'date' ? '&sort=byDate' : '&sort=byRelevance';
+                
+                // Add date range filter if popularity is selected
+                if (sort === 'popularity' && dateRange !== 'all') {
+                    sort_param += `&dateRange=${dateRange}`;
+                }
+
+                // If query is "top" but dateRange is "all", we search for empty query to get all-time popularity
+                const search_q = is_top ? '' : query;
+                const url = `${SEARCH_ENGINES.HACKER_NEWS_SEARCH}${encodeURIComponent(search_q)}${sort_param}&type=story`;
+                
+                const results = await perform_search_scrape(url, SELECTORS.HACKER_NEWS);
+                
+                if (!results || results.length === 0) {
+                    return JSON.stringify({
+                        error: `No results found on Hacker News for "${query}".`,
+                        results: []
+                    }, null, 2);
+                }
+
+                return JSON.stringify(results, null, 2);
+            } catch (e) {
+                return JSON.stringify({
+                    error: `Search failed for Hacker News: ${e.message}`,
+                    results: []
+                }, null, 2);
+            }
+        }
+    });
 
     register_tracked_tool(server, {
         name: 'osint_search_engine_batch',
